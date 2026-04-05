@@ -1,0 +1,24 @@
+{:paths ["src" "resources"]
+ :deps {org.clojure/clojure {:mvn/version "1.12.4"}
+        org.clojure/core.async {:mvn/version "1.9.865"}
+        org.clojure/core.cache {:mvn/version "1.2.263"}
+        org.clojure/core.memoize {:mvn/version "1.2.281"}
+        clojure.java-time/clojure.java-time {:mvn/version "1.4.3"}
+        metosin/jsonista {:mvn/version "1.0.0"}
+        metosin/malli {:mvn/version "0.20.1"}
+        http-kit/http-kit {:mvn/version "2.8.1"}
+        mount/mount {:mvn/version "0.1.23"}
+        jarohen/chime {:mvn/version "0.3.3"}
+        clj-commons/iapetos {:mvn/version "0.1.14"}
+        com.github.igrishaev/pg2-core {:mvn/version "0.1.48"}
+        com.github.igrishaev/pg2-honey {:mvn/version "0.1.48"}
+        com.layerware/hugsql {:mvn/version "0.5.3"}
+        com.taoensso/telemere {:mvn/version "1.2.1"}
+        com.taoensso/telemere-slf4j {:mvn/version "1.2.1"}}
+ :aliases {:dev {:extra-paths ["dev"]
+                 :extra-deps {org.clojure/tools.namespace {:mvn/version "1.5.1"}
+                              criterium/criterium {:mvn/version "0.4.6"}
+                              nrepl/nrepl {:mvn/version "1.6.0"}
+                              cider/cider-nrepl {:mvn/version "0.58.0"}}}
+           :build {:deps {io.github.clojure/tools.build {:mvn/version "0.10.13"}}
+                   :ns-default build}}}

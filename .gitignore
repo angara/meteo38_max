@@ -1,0 +1,36 @@
+# Build artifacts
+*.class
+*.ear
+*.jar
+*.war
+target/
+
+# Dependency and build tool outputs
+.cpcache/
+.lein-*
+pom.xml
+pom.xml.asc
+
+# Local environment files
+.env
+.env.local
+
+# Editor and IDE settings
+*.iml
+.codex
+.idea/
+.kilo/
+.vscode/
+
+# Clojure tooling and REPL files
+.clj-kondo/
+.nrepl-port
+repl-port
+repl_history.txt
+
+# Temporary files
+tmp/
+
+# OS-specific junk
+.DS_Store
+Thumbs.db

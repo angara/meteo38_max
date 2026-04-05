@@ -1,0 +1,25 @@
+[Unit]
+Description=MAX Weather Bot
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=meteomax
+Group=meteomax
+WorkingDirectory=/opt/meteomax
+ExecStart=/usr/bin/java -jar /opt/meteomax/meteomax.jar
+EnvironmentFile=/etc/meteomax/.env
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=meteomax
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/meteomax
+
+[Install]
+WantedBy=multi-user.target
