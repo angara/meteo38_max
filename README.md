@@ -17,9 +17,9 @@
 Проект построен на Clojure и использует следующие компоненты:
 
 - **Mount** - управление жизненным циклом компонентов
-- **http-kit** - HTTP клиент для API meteo_data и сервер для метрик
+- **http-kit** - HTTP клиент для API meteo_data и MAX API, HTTP сервер для webhook и метрик
 - **Malli** - валидация конфигурации
-- **HugSQL** - работа с PostgreSQL
+- **pg2** - работа с PostgreSQL
 - **Chime** - планировщик для рассылок
 - **iapetos** - Prometheus метрики
 - **telemere** - логирование
@@ -28,31 +28,28 @@
 
 ```
 src/
-├── maxbot/                    # Основное приложение
-│   ├── main.clj              # Точка входа
-│   ├── config.clj            # Конфигурация
-│   ├── app/
-│   │   ├── command.clj       # Обработчики команд
-│   │   ├── dispatch.clj      # Маршрутизация обновлений
-│   │   ├── fmt.clj           # Форматирование данных
-│   │   ├── inbound.clj       # Диспетчер входящих сообщений
-│   │   ├── sender.clj        # Планировщик рассылок
-│   │   ├── serv.clj          # Сервис polling'а MAX
-│   │   └── subs.clj          # Управление подписками
-│   ├── data/
-│   │   ├── api.sql           # SQL запросы (HugSQL)
-│   │   ├── init.sql          # Схема БД
-│   │   ├── meteo_api.clj     # Клиент meteo_data API
-│   │   ├── pg.clj            # PostgreSQL connection pool
-│   │   ├── sql.clj           # HugSQL функции
-│   │   └── store.clj         # Кэширующий слой данных
-│   └── metrics/
-│       ├── export.clj        # HTTP endpoint для метрик
-│       └── reg.clj           # Определение метрик
-└── mlib/                      # Общие утилиты
-    ├── envvar.clj            # Утилиты для env переменных
-    └── max/
-        └── botapi.clj        # Клиент MAX Bot API
+└── meteomax/
+    ├── main.clj              # Точка входа
+    ├── config.clj            # Конфигурация
+    ├── app/
+    │   ├── command.clj       # Обработчики команд
+    │   ├── dispatch.clj      # Маршрутизация update'ов
+    │   ├── fmt.clj           # Форматирование данных
+    │   ├── maxapi.clj        # Клиент MAX Bot API
+    │   ├── meteo_api.clj     # Клиент meteo_data API
+    │   ├── sender.clj        # Планировщик рассылок
+    │   ├── subs.clj          # Парсинг и форматирование подписок
+    │   └── webhook.clj       # Webhook сервер и регистрация webhook
+    ├── db/
+    │   ├── pg.clj            # PostgreSQL connection pool
+    │   ├── users.clj         # SQL-запросы к пользователям
+    │   └── subscriptions.clj # SQL-запросы к подпискам
+    ├── lib/
+    │   ├── envvar.clj        # Утилиты для env переменных
+    │   └── random.clj        # Secure random генерация секретов
+    └── metrics/
+        ├── export.clj        # HTTP endpoint для метрик
+        └── reg.clj           # Определение метрик
 ```
 
 ## API meteo_data
@@ -105,6 +102,10 @@ src/
 | `METEO_API_TIMEOUT` | Нет | `5000` | Таймаут HTTP запросов (мс) |
 | `METRICS_BIND` | Нет | `localhost` | Адрес сервера метрик |
 | `METRICS_PORT` | Нет | `7937` | Порт сервера метрик |
+| `WEBHOOK_BIND` | Нет | `localhost` | Адрес webhook сервера |
+| `WEBHOOK_PORT` | Нет | `8005` | Порт webhook сервера |
+| `WEBHOOK_URL` | Да | - | Публичный URL webhook для регистрации в MAX API |
+| `WEBHOOK_PATH` | Нет | путь из `WEBHOOK_URL` | Локальный path webhook endpoint |
 | `TIMEZONE` | Нет | `Asia/Irkutsk` | Часовой пояс приложения |
 
 ### Запуск в разработке
@@ -150,9 +151,8 @@ make docker-run
 | `/active` | Список активных станций |
 | `/favs` | Избранные станции |
 | `/info <станция>` | Информация о станции |
-| `/map <станция>` | Станция на карте |
 | `/subs` | Список подписок |
-| `/sub` | Редактировать подписку |
+| `/sub <станция> <HH:MM> <дни>` | Создать подписку |
 
 ## Метрики
 

@@ -1,48 +1,40 @@
 (ns meteomax.metrics.reg
   "Prometheus metric definitions and hook registration."
-  (:require [iapetos.core :as prom]
-            [iapetos.collector :as collector]))
+  (:require [iapetos.core :as prom]))
 
 (defonce registry
-  "Global Prometheus registry."
-  (atom (prom/registry)))
+  (atom (prom/collector-registry)))
 
-(def messages-processed
-  "Counter for total messages processed."
+(defonce messages-processed
   (prom/counter
-   :meteomax_messages_processed_total
-   {:help "Total number of messages processed"
-    :label-names [:chat-type]}))
+   :meteomax/messages_processed_total
+   {:description "Total number of messages processed"
+    :labels [:chat-type]}))
 
-(def api-calls-total
-  "Counter for meteo API calls."
+(defonce api-calls-total
   (prom/counter
-   :meteomax_meteo_api_calls_total
-   {:help "Total number of meteo API calls"
-    :label-names [:endpoint :status]}))
+   :meteomax/meteo_api_calls_total
+   {:description "Total number of meteo API calls"
+    :labels [:endpoint :status]}))
 
-(def api-latency
-  "Histogram for meteo API latency."
+(defonce api-latency
   (prom/histogram
-   :meteomax_meteo_api_latency_seconds
-   {:help "Meteo API request latency in seconds"
-    :label-names [:endpoint]}))
+   :meteomax/meteo_api_latency_seconds
+   {:description "Meteo API request latency in seconds"
+    :labels [:endpoint]}))
 
-(def subscriptions-sent
-  "Counter for subscription notifications sent."
+(defonce subscriptions-sent
   (prom/counter
-   :meteomax_subscriptions_sent_total
-   {:help "Total number of subscription notifications sent"}))
+   :meteomax/subscriptions_sent_total
+   {:description "Total number of subscription notifications sent"}))
 
-(def errors-total
-  "Counter for total errors."
+(defonce errors-total
   (prom/counter
-   :meteomax_errors_total
-   {:help "Total number of errors"
-    :label-names [:type]}))
+   :meteomax/errors_total
+   {:description "Total number of errors"
+    :labels [:type]}))
 
 (defn register-metrics
-  "Register all metrics in the registry."
   []
   (swap! registry
          #(-> %
@@ -53,38 +45,29 @@
               (prom/register errors-total))))
 
 (defn inc-messages
-  "Increment messages processed counter."
   [chat-type]
-  (prom/inc messages-processed chat-type))
+  (prom/inc @registry :meteomax/messages_processed_total {:chat-type chat-type}))
 
 (defn inc-api-call
-  "Increment API call counter."
   [endpoint status]
-  (prom/inc api-calls-total endpoint status))
+  (prom/inc @registry :meteomax/meteo_api_calls_total {:endpoint endpoint :status status}))
 
 (defn observe-api-latency
-  "Record API latency."
   [endpoint seconds]
-  (prom/observe api-latency endpoint seconds))
+  (prom/observe @registry :meteomax/meteo_api_latency_seconds {:endpoint endpoint} seconds))
 
 (defn inc-subscriptions-sent
-  "Increment subscriptions sent counter."
   []
-  (prom/inc subscriptions-sent))
+  (prom/inc @registry :meteomax/subscriptions_sent_total))
 
 (defn inc-error
-  "Increment error counter."
   [type]
-  (prom/inc errors-total type))
+  (prom/inc @registry :meteomax/errors_total {:type type}))
 
 (comment
-  ;; Register metrics:
   (register-metrics)
-  
-  ;; Use metrics:
   (inc-messages "private")
   (inc-api-call "active-stations" 200)
   (observe-api-latency "station-info" 0.5)
   (inc-subscriptions-sent)
-  (inc-error "api-timeout")
-)
+  (inc-error "api-timeout"))

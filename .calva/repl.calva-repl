@@ -1,0 +1,143 @@
+(when-let [requires (resolve 'clojure.main/repl-requires)] (clojure.core/apply clojure.core/require @requires))
+clj꞉user꞉> 
+(when-let [requires (resolve 'clojure.main/repl-requires)] (clojure.core/apply clojure.core/require @requires))
+clj꞉user꞉> 
+(when-let [requires (resolve 'clojure.main/repl-requires)] (clojure.core/apply clojure.core/require @requires))
+clj꞉user꞉> 
+(start)
+; Execution error (PGError) at pg.source/eval7398$fn (source.clj:204).
+; Unsupported data source: null
+clj꞉user꞉> 
+(mount/args)
+clj꞉meteomax.db.pg꞉> 
+(defn start []
+  (mount/start-with-args (config/make-config)))
+clj꞉user꞉> 
+(defn stop []
+  (mount/stop))
+clj꞉user꞉> 
+(start)
+; Execution error (PGErrorResponse) at org.pg.Result/maybeThrowError (Result.java:218).
+; Server error response: {severity=FATAL, code=28P01, file=auth.c, line=317, function=auth_failed, message=password authentication failed for user "meteomax", verbosity=FATAL}, sql: <unknown>
+clj꞉user꞉> 
+(when-let [requires (resolve 'clojure.main/repl-requires)] (clojure.core/apply clojure.core/require @requires))
+clj꞉user꞉> 
+(start)
+clj꞉user꞉> 
+(mount/defstate bot-info
+  :start (let [bot (maxapi/get-me (:max-api-token (mount/args)))]
+           (if bot
+             (do
+               (log! :info {:msg "Fetched bot information" :data (dissoc bot :full_avatar_url :avatar_url)})
+               bot)
+             (do
+               (log! :warn {:msg "Failed to fetch bot information"})
+               nil))))
+clj꞉meteomax.main꞉> 
+(log! :info {:msg "Fetched bot information" :data (dissoc bot :full_avatar_url :avatar_url)})
+; Syntax error compiling at (src/meteomax/main.clj:25:66).
+; Unable to resolve symbol: bot in this context
+clj꞉meteomax.main꞉> 
+(stop)
+clj꞉user꞉> 
+(start)
+; Execution error (IllegalArgumentException) at io.prometheus.client.CollectorRegistry/register (CollectorRegistry.java:57).
+; Failed to register Collector of type Counter: meteomax_messages_processed_total is already in use by another Collector of type Counter
+clj꞉user꞉> 
+(stop)
+clj꞉user꞉> 
+(start)
+; Execution error (IllegalArgumentException) at io.prometheus.client.CollectorRegistry/register (CollectorRegistry.java:57).
+; Failed to register Collector of type Counter: meteomax_messages_processed_total is already in use by another Collector of type Counter
+clj꞉user꞉> 
+(ns user
+  (:require [clojure.tools.namespace.repl :refer [refresh refresh-all]]
+            [mount.core :as mount]
+            [meteomax.config :as config]
+            [meteomax.db.pg :as pg]
+            [meteomax.app.meteo-api :as meteo-api]
+            [meteomax.main]
+            ))
+clj꞉user꞉> 
+conn
+clj꞉meteomax.db.pg꞉> 
+(max/get-subscriptions (:max-api-token (mount/args)))
+clj꞉user꞉> 
+(log! {:level :debug :msg "Debug"})
+clj꞉meteomax.app.webhook꞉> 
+(defn handle-update [config db update]
+  (log! {:level :debug
+         :id :webhook/update-received
+         :msg "Webhook update received"
+         :data {:update-type (:update_type update)}})
+  (case (:update_type update)
+    "message_created"  (handle-message-created config db update)
+    "message_callback" (handle-message-callback config db update)
+    "bot_started"      (handle-bot-started config db update)
+    (log! {:level :info
+           :id :webhook/update-ignored
+           :msg "Ignoring unsupported webhook update type"
+           :data {:update-type (:update_type update)}})))
+clj꞉meteomax.app.webhook꞉> 
+(defn handle-update [config db update]
+  (log! {:level :debug
+         :id :webhook/update-received
+         :msg "Webhook update received"
+         :data {:update-type (:update_type update)}})
+  (prn "!!!!!!!!!!!")
+  (case (:update_type update)
+    "message_created"  (handle-message-created config db update)
+    "message_callback" (handle-message-callback config db update)
+    "bot_started"      (handle-bot-started config db update)
+    (log! {:level :info
+           :id :webhook/update-ignored
+           :msg "Ignoring unsupported webhook update type"
+           :data {:update-type (:update_type update)}})))
+clj꞉meteomax.app.webhook꞉> 
+(stop)
+clj꞉user꞉> 
+(start)
+; 2026-05-28T15:12:56.288783319Z ERROR LOG wei meteomax.app.sender[85,13] {:msg "Sender error", :error "Server error response: {severity=ERROR, code=42P01, file=parse_relation.c, line=1466, function=parserOpenTable, position=30, message=relation \"subscriptions\" does not exist, verbosity=ERROR}, sql: select *\n               from subscriptions\n               where active = true\n               order by time_str, chat_id, station..."}
+; 
+; Execution error (IllegalArgumentException) at io.prometheus.client.CollectorRegistry/register (CollectorRegistry.java:57).
+; Failed to register Collector of type Counter: meteomax_messages_processed_total is already in use by another Collector of type Counter
+clj꞉user꞉> 
+(start)
+; Execution error (IllegalArgumentException) at io.prometheus.client.CollectorRegistry/register (CollectorRegistry.java:57).
+; Failed to register Collector of type Counter: meteomax_messages_processed_total is already in use by another Collector of type Counter
+clj꞉user꞉> 
+(start)
+; Execution error (IllegalArgumentException) at io.prometheus.client.CollectorRegistry/register (CollectorRegistry.java:57).
+; Failed to register Collector of type Counter: meteomax_messages_processed_total is already in use by another Collector of type Counter
+clj꞉user꞉> 
+(stop)
+clj꞉user꞉> 
+(start)
+; Execution error (IllegalArgumentException) at io.prometheus.client.CollectorRegistry/register (CollectorRegistry.java:57).
+; Failed to register Collector of type Counter: meteomax_messages_processed_total is already in use by another Collector of type Counter
+clj꞉user꞉> 
+(stop)
+clj꞉user꞉> 
+(start)
+; Execution error (IllegalArgumentException) at io.prometheus.client.CollectorRegistry/register (CollectorRegistry.java:57).
+; Failed to register Collector of type Counter: meteomax_messages_processed_total is already in use by another Collector of type Counter
+clj꞉user꞉> 
+(when-let [requires (resolve 'clojure.main/repl-requires)] (clojure.core/apply clojure.core/require @requires))
+clj꞉user꞉> 
+(start)
+clj꞉user꞉> 
+(defn handle-update [config db update]
+  (log! {;:level :debug
+         :id :webhook/update-received
+         :msg "Webhook update received"
+         :data {:update-type (:update_type update)}})
+  (prn "!!!!!!!!!!!")
+  (case (:update_type update)
+    "message_created"  (handle-message-created config db update)
+    "message_callback" (handle-message-callback config db update)
+    "bot_started"      (handle-bot-started config db update)
+    (log! {:level :info
+           :id :webhook/update-ignored
+           :msg "Ignoring unsupported webhook update type"
+           :data {:update-type (:update_type update)}})))
+clj꞉meteomax.app.webhook꞉> 

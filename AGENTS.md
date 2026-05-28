@@ -1,24 +1,51 @@
 # AGENTS.md
 
-Документация для AI-агентов и разработчиков.
+Documentation for AI agents and developers.
 
-## Стандарты кода
+## Language
 
-Смотрите [CODE_STYLE.md](./docs/CODE_STYLE.md) для правил оформления кода проекта.
+Respond in the same language as the user's question. Support Russian and English only. If the user writes in Russian, respond in Russian. If the user writes in English, respond in English. For any other language, respond in English.
 
-## Основные библиотеки
+## Current Information
 
-- **Mount** - управление жизненным циклом
-- **Telemere** - логирование
-- **Malli** - валидация
-- **HugSQL** - работа с БД
-- **http-kit** - HTTP клиент
-- **iapetos** - метрики
+Always use information from project documentation — [coding_style.md](./docs/coding_style.md), [architecture.md](./docs/architecture.md), [development.md](./docs/development.md), [libraries.md](./docs/libraries.md), `deps.edn`, source code. Do not rely on external knowledge about libraries, versions, or code structure.
 
-## Структура проекта
+## Freshness check for libraries
 
-- `meteomax.*` - код приложения
-- `meteomax.app.*` - бизнес-логика
-- `meteomax.data.*` - слой данных
-- `meteomax.metrics.*` - метрики и экспорт
-- `mlib.*` - общие утилиты
+For any question about libraries, frameworks, APIs, CLI tools, configuration options, versions, or examples — verify current information using official sources before answering. Prefer official documentation, GitHub repositories, changelogs, release notes, and package registries. If current information was not checked — explicitly say so.
+
+## Code Standards
+
+See [coding_style.md](./docs/coding_style.md) for code style guidelines.
+
+Do not add trivial one-line comments to function names (e.g. `;; Process data` right above `(defn process-data ...)`). Only add comments that explain non-obvious intent, constraints, or tradeoffs.
+
+## Generated Code
+
+When generating new functions or modules, always write corresponding tests. Keep existing tests up to date when modifying generated or existing code — update tests to reflect changed behavior, add new tests for new functionality, and remove obsolete tests.
+
+## Main Libraries
+
+See [libraries.md](./docs/libraries.md) for the list of libraries.
+
+## Project Structure
+
+- `meteomax.*` - application code
+- `meteomax.app.*` - business logic
+- `meteomax.data.*` - data layer
+- `meteomax.metrics.*` - metrics and export
+- `meteomax.lib.*` - common utilities
+
+## After Code Edits
+
+After making changes to code, run:
+
+1. **Lint**:
+   ```bash
+   clj-kondo --lint src
+   ```
+
+2. **Tests** (if any):
+   ```bash
+   clj -M:test
+   ```

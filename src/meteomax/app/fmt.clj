@@ -1,7 +1,7 @@
 (ns meteomax.app.fmt
   "Formatting utilities for weather data display."
   (:require [clojure.string :as str]
-            [java-time.api :as t]))
+            [tick.core :as t]))
 
 (def wind-directions
   "Wind direction arrows by degrees."
@@ -22,14 +22,14 @@
   [temp]
   (if (nil? temp)
     "-"
-    (format "%d°C" (int (Math/round temp)))))
+    (format "%d°C" (int (Math/round ^double temp)))))
 
 (defn format-pressure
   "Format pressure in hPa."
   [pressure]
   (if (nil? pressure)
     "-"
-    (format "%d гПа" (int (Math/round pressure)))))
+    (format "%d гПа" (int (Math/round ^double pressure)))))
 
 (defn format-wind
   "Format wind speed."
@@ -50,7 +50,7 @@
   [humidity]
   (if (nil? humidity)
     "-"
-    (format "%d%%" (int (Math/round humidity)))))
+    (format "%d%%" (int (Math/round ^double humidity)))))
 
 (defn format-precip
   "Format precipitation."
@@ -64,8 +64,8 @@
   [delta]
   (cond
     (nil? delta) ""
-    (pos? delta) (format " (+%d)" (int (Math/round delta)))
-    (neg? delta) (format " (%d)" (int (Math/round delta)))
+    (pos? delta) (format " (+%d)" (int (Math/round ^double delta)))
+    (neg? delta) (format " (%d)" (int (Math/round ^double delta)))
     :else " (0)"))
 
 (defn format-station-info
@@ -101,7 +101,7 @@
             (when g (str ", порывы " (format-gust g)))
             (when b (str " " (deg-to-direction b))))
        (when r (str "🌧 Осадки: " (format-precip r)))
-       (when last-ts (str "⏰ " (t/format "dd.MM.yyyy HH:mm" (t/zoned-date-time last-ts))))])))
+        (when last_ts (str "⏰ " (t/format (t/formatter "dd.MM.yyyy HH:mm") (t/zoned-date-time last_ts))))])))
 
 (defn format-station-brief
   "Format brief station info for lists."
@@ -127,8 +127,8 @@
    127 = all days"
   [days]
   (let [day-names {1 "Пн" 2 "Вт" 4 "Ср" 8 "Чт" 16 "Пт" 32 "Сб" 64 "Вс"}
-        active-days (filter #(bit-test days (int (Math/log % 2)))
-                           (keys day-names))]
+        active-days (filter #(bit-test days (int (/ (Math/log %) (Math/log 2))))
+                            (keys day-names))]
     (if (= days 127)
       "ежедневно"
       (if (empty? active-days)
