@@ -1,17 +1,18 @@
 (ns meteomax.main
   (:require [mount.core :as mount]
-             [meteomax.app.maxapi :as maxapi]
-             [meteomax.config :as config]
-             [meteomax.db.pg :as pg]
-             [meteomax.app.sender :as sender]
-             [meteomax.app.webhook]
-             [meteomax.metrics.export :as export]
-             [taoensso.telemere :refer [log!]])
+            [meteomax.app.maxapi :as maxapi]
+            [meteomax.config :as config]
+            [meteomax.db.pg :as pg]
+            [meteomax.app.sender :as sender]
+            [meteomax.app.webhook]
+            [meteomax.metrics.export :as export]
+            [taoensso.telemere :refer [log!]])
   (:gen-class))
 
-(mount/defstate sender-proc
+#_(mount/defstate sender-proc
   :start (sender/start-sender (mount/args) pg/conn)
   :stop (sender/stop-sender sender-proc))
+
 
 (mount/defstate metrics-endpoint
   :start (export/start-metrics-server (mount/args))
@@ -22,34 +23,18 @@
   :start (let [bot (maxapi/get-me (:max-api-token (mount/args)))]
            (if bot
              (do
-               (log! :info {:msg "Fetched bot information" :data (dissoc bot :full_avatar_url :avatar_url)})
+               (log! {:id :main/bot-info :data (dissoc bot :full_avatar_url :avatar_url)})
                bot)
              (do
-               (log! :warn {:msg "Failed to fetch bot information"})
+               (log! :warn {:id :main/bot-info-failed :msg "get-me failed"})
                nil))))
 
 (defn -main []
-  (let [build-info (try
-                     (read-string (slurp "build-info.edn"))
-                     (catch Exception _ {}))]
-    (log! :info {:msg "Starting MAX Weather Bot"
-                 :version (:version build-info "unknown")
-                 :build-time (:build-time build-info "unknown")})
+  (let [build-info @config/build-info]
+    (log! {:id :main/start :data build-info})
     (try
-      (mount/start-with-args (config/make-config))
-      (log! :info {:msg "MAX Weather Bot started successfully"})
+      (let [{started :started} (mount/start-with-args (config/make-config))]
+        (log! {:msg "Bot started successfully" :data started}))
       (catch Exception e
-        (log! :error {:msg "Failed to start MAX Weather Bot"
-                      :error (ex-message e)})
+        (log! :error {:msg "Failed to start Bot" :error (ex-message e)})
         (System/exit 1)))))
-
-(comment
-  ;; Start in REPL:
-  (-main)
-
-  ;; Stop all:
-  (mount/stop)
-
-  ;; Restart specific component:
-  (mount/stop #'sender-proc)
-  (mount/start #'sender-proc))

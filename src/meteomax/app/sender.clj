@@ -6,8 +6,8 @@
             [tick.core :as t]
             [meteomax.app.fmt :as fmt]
             [meteomax.app.maxapi :as maxapi]
-            [meteomax.app.meteo-api :as meteo-api]
-            [meteomax.db.subscriptions :as subscriptions]
+            [meteomax.meteo-data.core :as meteo-api]
+            [meteomax.db.subs :as subscriptions]
             [taoensso.telemere :refer [log!]]))
 
 
@@ -52,13 +52,14 @@
        (:max-api-token config)
        (:chat_id sub)
        msg)
-      (log! :info {:msg "Subscription sent"
-                   :sub-id (:id sub)
-                   :chat-id (:chat_id sub)}))
+      (log! {:level :info
+             :id    :sender/subscription-sent
+             :data  {:sub-id (:id sub) :chat-id (:chat_id sub)}}))
     (catch Exception e
-      (log! :error {:msg "Failed to send subscription"
-                    :sub-id (:id sub)
-                    :error (ex-message e)}))))
+      (log! {:level :error
+             :id    :sender/subscription-failed
+             :msg   "Failed to send subscription"
+             :data  {:sub-id (:id sub) :error (ex-message e)}}))))
 
 
 (defn- check-and-send
@@ -79,10 +80,10 @@
     (chime/chime-at
      (chime/periodic-seq (t/now) (t/new-duration 60 :seconds))
      (fn [_instant]
-        (try
-          (check-and-send config db)
-          (catch Exception e
-            (log! :error {:msg "Sender error" :error (ex-message e)})))))
+       (try
+         (check-and-send config db)
+         (catch Exception e
+           (log! :error {:msg "Sender error" :error (ex-message e)})))))
     {:channel ch
      :running true}))
 
@@ -94,16 +95,3 @@
   (async/close! (:channel sender))
   (alter-meta! sender assoc :running false))
 
-
-(comment
-  ;; Test sender:
-  (def config {:max-api-token "test"
-               :meteo-api-url "https://angara.net/meteo/api"
-               :meteo-api-auth "Bearer test"
-               :meteo-api-timeout 5000})
-
-  ;; Start sender:
-  (def s (start-sender config nil))
-
-  ;; Stop sender:
-  (stop-sender s))

@@ -10,78 +10,54 @@
             [taoensso.telemere :refer [log!]]))
 
 
-(defn- webhook-path
-  [config]
+(defn- webhook-path [config]
   (:webhook-path config))
 
 
-(defn- header-secret
-  [req]
-  (or (get-in req [:headers "x-max-bot-api-secret"])
-      (get-in req [:headers "X-Max-Bot-Api-Secret"])))
+(defn- header-secret [req]
+  (get-in req [:headers "x-max-bot-api-secret"]))
 
 
-(defn valid-secret?
-  [expected-secret req]
+(defn valid-secret? [expected-secret req]
   (= expected-secret (header-secret req)))
 
 
-(defn- parse-body
-  [req]
+(defn- parse-body [req]
   (let [body (slurp (:body req))]
     (json/read-value body json/keyword-keys-object-mapper)))
 
 
-(defn- response
-  [status body]
+(defn- response [status body]
   {:status status
    :headers {"Content-Type" "text/plain; charset=utf-8"}
    :body body})
 
 
-(defn- attachment-by-type
-  [message attachment-type]
-  (some #(when (= attachment-type (:type %)) %) (get-in message [:body :attachments])))
+(defn- attachment-by-type [message attachment-type]
+  (->> (-> message :body :attachments)
+       (some #(when (= attachment-type (:type %)) %))))
 
 
-(defn- command-name
-  [text]
-  (when (and (string? text) (str/starts-with? text "/"))
-    (subs text 1 (or (str/index-of text " ") (count text)))))
+(defn- handle-command [config db chat-id user text]
+  (case (-> text str/trim str/lower-case)
+    "/start" (command/handle-start config db chat-id user)
+    "/help"  (command/handle-help config chat-id)
+    "/favs"  (command/handle-favs config db chat-id)
+    "."      (command/handle-favs config db chat-id)
+    "/subs"  (command/handle-subs config db chat-id)
+    ","      (command/handle-subs config db chat-id)
+    nil))
 
 
-(defn- command-args
-  [text]
-  (if (seq text)
-    (rest (str/split text #"\s+"))
-    []))
-
-
-(defn- user-first-name
-  [user]
-  (or (:first_name user) (:name user)))
-
-
-(defn- handle-command
-  [config db chat-id user text]
-  (case (keyword (command-name text))
-    :start (command/handle-start config db chat-id (:username user) (user-first-name user))
-    :help (command/handle-help config chat-id)
-    :near (command/handle-near config db chat-id (command-args text))
-    :active (command/handle-active config db chat-id (command-args text))
-    :favs (command/handle-favs config db chat-id)
-    :info (command/handle-info config db chat-id (command-args text))
-    :subs (command/handle-subs config db chat-id)
-    :sub (command/handle-sub config db chat-id (command-args text))
-    (command/handle-text config chat-id text)))
-
-
-(defn- handle-location-message
-  [config db chat-id message]
-  (let [location (attachment-by-type message "location")
-        payload  (:payload location)]
-    (when payload
-      (command/handle-location config db chat-id (:lat payload) (:lon payload)))))
+(defn- handle-location-message [config db chat-id message]
+  (if-let [location (attachment-by-type message "location")]
+    (command/handle-location config db chat-id location)
+    (do
+      (log! {:level :warn
+             :id    :webhook/location-not-found
+             :msg   "Location attachment missing payload"
+             :data  {:message message}})
+      nil)))
 
 
 (defn- handle-message-created
@@ -91,11 +67,10 @@
         text    (get-in message [:body :text])
         user    (:sender message)]
     (cond
-      (and text (str/starts-with? text "/"))
-      (handle-command config db chat-id user text)
-
       (seq text)
-      (command/handle-text config chat-id text)
+      (or
+       (handle-command config db chat-id user text)
+       (command/handle-text config chat-id text))
 
       (attachment-by-type message "location")
       (handle-location-message config db chat-id message)
@@ -107,33 +82,23 @@
              :data {:chat-id chat-id}}))))
 
 
-(defn- handle-message-callback
-  [_config _db update]
-  (log! {:level :info
-         :id :webhook/callback-received
+(defn- handle-message-callback [_config _db update]
+  (log! {:id :webhook/callback-received
          :msg "Callback update received"
          :data {:update update}}))
 
 
-(defn- handle-bot-started
-  [config db update]
-  (let [user (:user update)]
-    (command/handle-start config db (:chat_id update) (:username user) (user-first-name user))))
+(defn- handle-bot-started [config db update]
+  (command/handle-start config db (:chat_id update) (:user update)))
 
 
 (defn handle-update [config db update]
-  (log! {;:level :debug
-         :id :webhook/update-received
-         :msg "Webhook update received"
-         :data {:update-type (:update_type update)}})
+  (log! {:id :webhook/update-received :data {:update-type (:update_type update)}})
   (case (:update_type update)
     "message_created"  (handle-message-created config db update)
     "message_callback" (handle-message-callback config db update)
     "bot_started"      (handle-bot-started config db update)
-    (log! {:level :info
-           :id :webhook/update-ignored
-           :msg "Ignoring unsupported webhook update type"
-           :data {:update-type (:update_type update)}})))
+    (log! {:id :webhook/update-ignored :data {:update-type (:update_type update)}})))
 
 
 (defn webhook-handler

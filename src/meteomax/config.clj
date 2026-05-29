@@ -1,9 +1,17 @@
 (ns meteomax.config
-  (:require [clojure.string :as str]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
             [malli.core :as m]
             [malli.error :as me]
             [meteomax.lib.envvar :as env])
   (:import [java.time ZoneId]))
+
+
+(def build-info
+  (delay
+    (when-let [r (io/resource "build-info.edn")]
+      (edn/read-string (slurp r)))))
 
 
 (defn- normalize-webhook-path
@@ -93,7 +101,10 @@
              :webhook-url     webhook-url
              :webhook-path    webhook-path
              :timezone        timezone
-             :zone-id         (parse-zone-id timezone)}]
+             :zone-id         (parse-zone-id timezone)
+             :default-lat     52.28
+             :default-lon     104.28
+             }]
     (if (m/validate ConfigSchema cfg)
       cfg
       (let [errors (me/humanize (m/explain ConfigSchema cfg))]

@@ -1,4 +1,4 @@
-(ns meteomax.db.subscriptions
+(ns meteomax.db.subs
   "Database queries for weather subscriptions. Assumes a subscriptions table
    with chat_id, station_name, time_str, days_of_week and active columns."
   (:require [pg.core :as pg]))

@@ -36,8 +36,8 @@
 
 (defn register-metrics
   []
-  (swap! registry
-         #(-> %
+  (reset! registry
+          (-> (prom/collector-registry)
               (prom/register messages-processed)
               (prom/register api-calls-total)
               (prom/register api-latency)
