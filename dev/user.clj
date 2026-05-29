@@ -3,6 +3,7 @@
             [mount.core :as mount]
             [taoensso.telemere :as telemere]
             [meteomax.config :as config]
+            [meteomax.app.sender :as sender]
             [meteomax.db.pg :as pg]
             [meteomax.meteo-data.core :as meteo-api]
             [meteomax.app.maxapi :as max]
@@ -48,7 +49,9 @@
   (max/get-subscriptions (:max-api-token (mount/args)))
   
   (meteo-api/get-active-stations cfg (:default-lat cfg) (:default-lon cfg) :search "анг")
-  
+
+
+  (sender/check-and-send cfg pg/conn)
 
 
   )

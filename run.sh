@@ -19,10 +19,6 @@ if [ -z "$METEO_API_AUTH" ]; then
     exit 1
 fi
 
-# Run database migrations if needed
-echo "Running database migrations..."
-# TODO: Add migration step
-
 # Start the application
 echo "Starting application..."
 exec java -jar /app/maxbot.jar
