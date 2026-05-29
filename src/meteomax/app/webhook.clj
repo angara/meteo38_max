@@ -213,6 +213,13 @@
   [config secret]
   (let [token (:max-api-token config)
         url   (:webhook-url config)
+        existing (-> (maxapi/get-subscriptions token) :subscriptions)
+        _     (doseq [{sub-url :url} existing]
+                (maxapi/delete-webhook token sub-url)
+                (log! {:level :info
+                       :id :webhook/subscription-deleted
+                       :msg "Webhook subscription deleted"
+                       :data {:url sub-url}}))
         resp  (maxapi/set-webhook token url secret)]
     (if (:success resp)
       (do

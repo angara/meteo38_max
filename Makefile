@@ -38,11 +38,10 @@ rev-proxy:
 install:
 	clojure -P
 
-# Run
-run:
-	@set -a; . .env; java -jar target/meteomax-1.0.*-standalone.jar
-
 # Docker
+image: build
+	docker build -t meteo/meteo38_max:latest .
+
 docker-build:
 	docker build -t meteomax .
 

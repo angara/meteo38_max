@@ -118,6 +118,10 @@
   (request :get "/subscriptions" token {}))
 
 
+(defn delete-webhook [token url]
+  (request :delete "/subscriptions" token {} {:url url}))
+
+
 (defn set-webhook [token url secret]
   (request :post "/subscriptions" token {:url url
                                          :secret secret
