@@ -93,43 +93,6 @@
     (is (not (str/includes? result "<i></i>")))))
 
 
-;; --- format-station-info ---
-
-(deftest format-station-info-with-weather
-  (let [result (fmt/format-station-info
-                {:st "uiii" :title "Иркутский аэропорт"
-                 :descr "г. Иркутск"
-                 :elev 495.0
-                 :last {:t -20.0 :t_delta 0.0 :p 986.0 :w 3.0 :g 14.0 :b 80.0}})]
-    (is (str/includes? result "🔹 Иркутский аэропорт"))
-    (is (str/includes? result "г. Иркутск"))
-    (is (str/includes? result "-20°C"))
-    (is (str/includes? result "мм.рт.ст."))
-    (is (str/includes? result "м/с"))
-    (is (str/includes? result "/info uiii  ^495 м"))))
-
-(deftest format-station-info-temperature-trend
-  (testing "rising trend"
-    (let [result (fmt/format-station-info
-                  {:st "x" :title "X" :last {:t 5.0 :t_delta 1.5}})]
-      (is (str/includes? result "↑"))))
-
-  (testing "falling trend"
-    (let [result (fmt/format-station-info
-                  {:st "x" :title "X" :last {:t 5.0 :t_delta -1.5}})]
-      (is (str/includes? result "↓"))))
-
-  (testing "stable — no arrow"
-    (let [result (fmt/format-station-info
-                  {:st "x" :title "X" :last {:t 5.0 :t_delta 0.5}})]
-      (is (not (str/includes? result "↑")))
-      (is (not (str/includes? result "↓"))))))
-
-(deftest format-station-info-no-weather
-  (let [result (fmt/format-station-info {:st "abc" :title "Тест" :last nil})]
-    (is (str/includes? result "🔹 Тест"))
-    (is (str/includes? result "/info abc"))))
-
 
 ;; --- format-days-of-week ---
 

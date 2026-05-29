@@ -11,36 +11,26 @@
             [taoensso.telemere :refer [log!]]))
 
 
-(defn- days-match?
-  "Check if current day matches subscription days string (1=пн … 7=вс)."
-  [days-of-week]
-  (let [day-num (case (t/day-of-week (t/today))
-                  :monday 1 :tuesday 2 :wednesday 3 :thursday 4
-                  :friday 5 :saturday 6 :sunday 7
-                  0)]
+(defn- days-match? [local-now days-of-week]
+  (let [day-num (t/int (t/day-of-week local-now))]
     (str/includes? (str days-of-week) (str day-num))))
 
 
-(defn- time-match?
-  "Check if current time matches subscription time string."
-  [time-str]
-  (let [now (t/now)
-        [sub-hour sub-min] (map #(Integer/parseInt %) (str/split time-str #":"))]
-    (and (= (t/hour now) sub-hour)
-         (= (t/minute now) sub-min))))
+(defn- time-match? [local-now time-str]
+  (let [[sub-hour sub-min] (map #(Integer/parseInt %) (str/split time-str #":"))]
+    (and (= (t/hour local-now) sub-hour)
+         (= (t/minute local-now) sub-min))))
 
 
 ;;  TamTam/MAX error code when the user stops the bot
 (def ^:private bot-stopped-code 909)
 
-(defn- send-subscription
-  "Send weather data for a subscription."
-  [config db sub]
+
+(defn- send-subscription [config db sub]
   (try
     (let [station-info (meteo-api/get-station-info config (:station_name sub))
-          msg    (str "🔔 Погода: " (:station_name sub) "\n\n"
-                      (fmt/format-station-info station-info))
-          result (maxapi/send-message (:max-api-token config) (:chat_id sub) msg)]
+          msg          (fmt/format-station-brief station-info)
+          result       (maxapi/send-message (:max-api-token config) (:chat_id sub) msg :format "html")]
       (if (:ok result)
         (log! {:level :info
                :id    :sender/subscription-sent
@@ -48,7 +38,7 @@
         (do
           (when (= bot-stopped-code (:error-code result))
             (log! {:level :info :id :sender/user-blocked-bot
-                   :msg "User blocked the bot, deactivating"
+                   :msg "User blocked the bot"
                    :data {:chat-id (:chat_id sub)}})
             (users/set-active! db (:chat_id sub) false))
           (log! {:level :warn
@@ -61,19 +51,17 @@
              :data  {:sub-id (:id sub) :error (ex-message e)}}))))
 
 
-(defn- check-and-send
-  "Check all active subscriptions and send matching ones."
-  [config db]
-  (let [subs (subscriptions/get-all-active-subs db)]
-    (doseq [sub subs]
-      (when (and (days-match? (:days_of_week sub))
-                 (time-match? (:time_str sub)))
-        (send-subscription config db sub)))))
+(defn check-and-send [config db]
+  (let [local-now (t/in (t/now) (:zone-id config))
+        subs      (subscriptions/get-all-active-subs db)
+        due-subs  (filter #(and (days-match? local-now (:days_of_week %))
+                                (time-match? local-now (:time_str %)))
+                          subs)]
+    (doseq [sub due-subs]
+      (send-subscription config db sub))))
 
 
-(defn start-sender
-  "Start subscription sender scheduled job."
-  [config db]
+(defn start-sender [config db]
   (log! {:level :info :id :sender/start :msg "Starting subscription sender"})
   (let [chime (chime/chime-at
                (chime/periodic-seq (t/now) (t/new-duration 60 :seconds))
@@ -88,9 +76,7 @@
     {:chime chime}))
 
 
-(defn stop-sender
-  "Stop subscription sender."
-  [sender]
+(defn stop-sender [sender]
   (log! {:level :info :id :sender/stop :msg "Stopping subscription sender"})
   (.close ^java.io.Closeable (:chime sender)))
 

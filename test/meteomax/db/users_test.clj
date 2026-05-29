@@ -9,14 +9,14 @@
     (is (= [] (users/get-favorites nil 1)))))
 
 
-(deftest add-favorite-uses-parameterized-query
+(deftest set-favs-uses-parameterized-query
   (let [calls (atom [])]
     (with-redefs [pg/execute (fn [db sql opts]
                                (swap! calls conj [db sql opts])
-                               [{:favs ["uiii"]}])]
-      (users/add-favorite! :db 42 "uiii")
+                               [{:favs ["uiii" "kultuk"]}])]
+      (users/set-favs! :db "42" ["uiii" "kultuk"])
       (is (= :db (ffirst @calls)))
-      (is (= [42 ["uiii"]] (get-in (first @calls) [2 :params]))))))
+      (is (= ["42" ["uiii" "kultuk"]] (get-in (first @calls) [2 :params]))))))
 
 
 (deftest ensure-user-stores-userinfo

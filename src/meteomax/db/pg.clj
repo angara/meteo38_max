@@ -22,7 +22,7 @@
   [url]
   (log! {:level :info
          :id :db.pg/create-pool
-         :msg "ceating PostgreSQL connection pool"
+         :msg "creating PostgreSQL connection pool"
          :data {:url (redact-uri url)}})
   (pg/pool url))
 

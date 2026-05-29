@@ -68,16 +68,6 @@
                          (str "<b>" weather "</b>"))]))))
 
 
-(defn format-station-info [{:keys [st title descr elev last]}]
-  (let [weather (when last (format-weather last))]
-    (str/join "\n"
-              (remove nil?
-                      [(str "🔹 " title)
-                       descr
-                       (when (seq weather) weather)
-                       (str "/info " st (when elev (str "  ^" (int elev) " м")))]))))
-
-
 (defn format-time [time-str]
   time-str)
 
@@ -99,8 +89,8 @@
 
 
 (defn format-sub-done [title time-str days sub-id]
-  (str (format-sub-message title time-str) 
-       "\n📅 " (format-days-of-week days) 
+  (str (format-sub-message title time-str)
+       "\n📅 " (format-days-of-week days)
        "\n/sub_" sub-id))
 
 

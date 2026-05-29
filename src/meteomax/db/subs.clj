@@ -52,7 +52,9 @@
 (defn get-all-active-subs
   [db]
   (pg/execute db
-              "select *
-               from subs
-               where active = true
-               order by time_str, chat_id, station_name"))
+              "select s.*
+               from subs s
+               join users u on u.chat_id = s.chat_id
+               where s.active = true
+                 and u.active = true
+               order by s.time_str, s.chat_id, s.station_name"))

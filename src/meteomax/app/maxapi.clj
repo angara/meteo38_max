@@ -7,6 +7,17 @@
 
 (def ^:private api-base "https://platform-api.max.ru")
 
+(def ^:private throttle-lock (Object.))
+(def ^:private last-request-ms (atom 0))
+(def ^:private min-interval-ms 20)
+
+(defn- throttle! []
+  (locking throttle-lock
+    (let [wait (- min-interval-ms (- (System/currentTimeMillis) @last-request-ms))]
+      (when (pos? wait)
+        (Thread/sleep wait)))
+    (reset! last-request-ms (System/currentTimeMillis))))
+
 
 (defn- make-url [endpoint]
   (str api-base endpoint))
@@ -19,6 +30,7 @@
 
 
 (defn- http-call [http-method url opts params]
+  (throttle!)
   (case http-method
     :get    (http/get url (update opts :query-params merge params))
     :post   (http/post url (assoc opts :body (json/write-value-as-string params)))
@@ -56,32 +68,46 @@
 
 
 (defn- request-result
-  "Like request, but returns {:ok true} or {:ok false :error-code N}."
+  "Like request, but returns {:ok true} or {:ok false :error-code N}.
+   Retries up to 2 times on HTTP 429 with exponential backoff (1s, 2s)."
   [http-method endpoint token params query-params]
   (let [url  (make-url endpoint)
         opts (cond-> (request-opts token)
                query-params (assoc :query-params query-params))]
     (log! {:level :debug
-           :id    :maxapi/request
+           :id    :maxapi/request-ok
            :data  {:method http-method :endpoint endpoint :params params}})
-    (try
-      (let [{:keys [status body]} @(http-call http-method url opts params)
-            parsed (try (json/read-value body json/keyword-keys-object-mapper)
-                        (catch Exception _ nil))]
-        (if (= 200 status)
-          {:ok true}
+    (loop [attempts 3 delay-ms 1000]
+      (let [result
+            (try
+              (let [{:keys [status body]} @(http-call http-method url opts params)
+                    parsed (try (json/read-value body json/keyword-keys-object-mapper)
+                                (catch Exception _ nil))]
+                (cond
+                  (= 200 status) {:ok true}
+                  (= 429 status) {:ok false :error-code :rate-limited}
+                  :else
+                  (do
+                    (log! {:level :warn
+                           :id    :maxapi/response-error
+                           :msg   "MAX API error"
+                           :data  {:status status :body body}})
+                    {:ok false :error-code (or (:code parsed) status)})))
+              (catch Exception e
+                (log! {:level :error
+                       :id    :maxapi/request-exception
+                       :msg   "MAX API exception"
+                       :data  {:method http-method :endpoint endpoint :error (ex-message e)}})
+                {:ok false :error-code :exception}))]
+        (if (and (= :rate-limited (:error-code result)) (> attempts 1))
           (do
             (log! {:level :warn
-                   :id    :maxapi/response-error
-                   :msg   "MAX API error"
-                   :data  {:status status :body body}})
-            {:ok false :error-code (:code parsed)})))
-      (catch Exception e
-        (log! {:level :error
-               :id    :maxapi/request-exception
-               :msg   "MAX API exception"
-               :data  {:method http-method :endpoint endpoint :error (ex-message e)}})
-        {:ok false :error-code :exception}))))
+                   :id    :maxapi/rate-limited
+                   :msg   "Rate limited, retrying"
+                   :data  {:delay-ms delay-ms :attempts-left (dec attempts)}})
+            (Thread/sleep delay-ms)
+            (recur (dec attempts) (* 2 delay-ms)))
+          result)))))
 
 
 (defn get-updates [token]
@@ -124,6 +150,10 @@
 
 (defn get-me [token]
   (request :get "/me" token {}))
+
+
+(defn set-commands [token commands]
+  (request :patch "/me" token {:commands commands}))
 
 
 (defn upload-file [token file-path]

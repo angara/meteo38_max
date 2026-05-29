@@ -70,7 +70,7 @@
                                             title   (or (:title st-info) (:station_name sub))]
                                         (str "🔹 <u>" title "</u>"
                                              "\n" (:time_str sub)
-                                             ": " (fmt/format-days-of-week (:days_of_week sub))
+                                             " - " (fmt/format-days-of-week (:days_of_week sub))
                                              "\n/sub_" (:id sub))))
                                     subs)))]
         (send! config db chat-id msg :format "html")))))
