@@ -2,7 +2,7 @@
 
 ## База данных
 
-### users
+### meteomax_users
 
 | Колонка            | Тип                | Описание                                        |
 |--------------------|--------------------|-------------------------------------------------|
@@ -14,7 +14,7 @@
 | `last_latlon`      | `JSONB`            | Последняя геопозиция в формате `[lat, lon]`     |
 | `active`           | `BOOLEAN NOT NULL` | Пользователь активен (по умолчанию `true`)      |
 
-### subs
+### meteomax_subs
 
 | Колонка        | Тип                  | Описание                                                                                             |
 |----------------|----------------------|------------------------------------------------------------------------------------------------------|
@@ -118,7 +118,7 @@
 | Тип                | Поля                               |
 |--------------------|------------------------------------|
 | `message_created`  | `message`, `chat_id?`              |
-| `message_callback` | `callback`                         |
+| `message_callback` | `callback`, `message`              |
 | `bot_started`      | `chat_id`, `user`                  |
 
 ### Attachment: входящая геопозиция
@@ -139,7 +139,7 @@
   "payload": {
     "buttons": [
       [
-        { "type": "callback", "text": "⭐", "payload": "fav:add:uiii" },
+        { "type": "callback", "text": "⭐", "payload": "fav:toggle:uiii" },
         { "type": "link",     "text": "🌐", "url": "https://angara.net/meteo/st/uiii" }
       ]
     ]

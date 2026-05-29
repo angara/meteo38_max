@@ -7,7 +7,7 @@
   [db chat-id userinfo]
   (first
    (pg/execute db
-               "insert into users (chat_id, userinfo, active)
+               "insert into meteomax_users(chat_id, userinfo, active)
                 values ($1, $2, true)
                 on conflict (chat_id) do update
                 set userinfo   = excluded.userinfo,
@@ -22,7 +22,7 @@
   (when-let [latlon (:last_latlon
                      (first (pg/execute db
                                         "select last_latlon
-                                         from users
+                                         from meteomax_users
                                          where chat_id = $1"
                                         {:params [chat-id]})))]
     {:latitude (nth latlon 0) :longitude (nth latlon 1)}))
@@ -32,7 +32,7 @@
   [db chat-id latitude longitude]
   (first
    (pg/execute db
-               "insert into users (chat_id, last_latlon)
+               "insert into meteomax_users(chat_id, last_latlon)
                 values ($1, $2)
                 on conflict (chat_id) do update
                 set last_latlon = excluded.last_latlon,
@@ -45,7 +45,7 @@
   [db chat-id]
   (or (:favs (first (pg/execute db
                                 "select favs
-                                 from users
+                                 from meteomax_users
                                  where chat_id = $1"
                                 {:params [chat-id]})))
       []))
@@ -54,7 +54,7 @@
 (defn set-active!
   [db chat-id active?]
   (pg/execute db
-              "update users
+              "update meteomax_users
                set active = $2, updated_at = now()
                where chat_id = $1
                  and (active is distinct from $2)"
@@ -65,7 +65,7 @@
   [db chat-id favs]
   (first
    (pg/execute db
-               "insert into users (chat_id, favs)
+               "insert into meteomax_users(chat_id, favs)
                 values ($1, $2)
                 on conflict (chat_id) do update
                 set favs       = excluded.favs,

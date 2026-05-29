@@ -47,8 +47,10 @@ src/meteomax/
 Состояния:
 
 - `meteomax.db.pg/conn` — пул подключений к PostgreSQL
-- `meteomax.main/sender-proc` — планировщик рассылок
 - `meteomax.main/metrics-endpoint` — HTTP сервер метрик
+- `meteomax.main/sender-proc` — планировщик рассылок
+- `meteomax.main/bot-info` — информация о боте (`GET /me`)
+- `meteomax.main/bot-commands-registered` — регистрация команд бота (`PATCH /me`)
 - `meteomax.app.webhook/webhook-secret` — runtime secret для MAX webhook
 - `meteomax.app.webhook/webhook-endpoint` — HTTP webhook сервер
 - `meteomax.app.webhook/webhook-subscription` — регистрация webhook в MAX API
@@ -79,8 +81,8 @@ PostgreSQL доступен через **pg2** (`pg.core`). Слой БД исп
 
 `meteomax.app.maxapi` инкапсулирует вызовы к `https://platform-api.max.ru`.
 
-- `set-webhook`, `get-me`
-- `send-message`, `send-location`, `answer-callback`
+- `set-webhook`, `get-me`, `set-commands`
+- `send-message`, `send-location`, `answer-callback`, `delete-message`
 - `get-updates`, `get-subscriptions`, `upload-file`
 
 ## Webhook
@@ -96,8 +98,10 @@ PostgreSQL доступен через **pg2** (`pg.core`). Слой БД исп
 `meteomax.app.command`:
 
 - `/start`, `/help`, `/favs`, `/subs`
+- `/sub_N` — редактирование подписки по id
 - Текст 3+ символа → поиск станций (до 10 результатов)
 - Геопозиция → 5 ближайших активных станций
+- Callback-маршруты: `fav:toggle:`, `sub:new:`, `sub:time:`, `sub:day:`, `sub:ok:`, `sub:delete:`
 
 ## Планировщик
 

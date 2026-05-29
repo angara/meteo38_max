@@ -1,4 +1,4 @@
-create table if not exists users (
+create table if not exists meteomax_users (
     chat_id          text        primary key,
     created_at       timestamptz not null default now(),
     updated_at       timestamptz not null default now(),
@@ -8,7 +8,7 @@ create table if not exists users (
     active           boolean not null default true
 );
 
-create table if not exists subs (
+create table if not exists meteomax_subs (
     id           serial      primary key,
     created_at   timestamptz not null default now(),
     chat_id      text        not null,
@@ -18,4 +18,4 @@ create table if not exists subs (
     active       boolean     not null default true
 );
 
-create index if not exists subs_chat_id_idx on subs (chat_id);
+create index if not exists meteomax_subs_chat_id_idx on meteomax_subs (chat_id);
