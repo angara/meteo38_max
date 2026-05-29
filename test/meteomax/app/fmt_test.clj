@@ -134,17 +134,17 @@
 ;; --- format-days-of-week ---
 
 (deftest format-days-of-week-single
-  (is (= "пн" (fmt/format-days-of-week 1)))
-  (is (= "вс" (fmt/format-days-of-week 64))))
+  (is (= "пн" (fmt/format-days-of-week "1")))
+  (is (= "вс" (fmt/format-days-of-week "7"))))
 
 (deftest format-days-of-week-workdays
-  (is (= "пн,вт,ср,чт,пт" (fmt/format-days-of-week 31))))
+  (is (= "пн, вт, ср, чт, пт" (fmt/format-days-of-week "12345"))))
 
 (deftest format-days-of-week-weekend
-  (is (= "сб,вс" (fmt/format-days-of-week 96))))
+  (is (= "сб, вс" (fmt/format-days-of-week "67"))))
 
 (deftest format-days-of-week-all
-  (is (= "пн,вт,ср,чт,пт,сб,вс" (fmt/format-days-of-week 127))))
+  (is (= "пн, вт, ср, чт, пт, сб, вс" (fmt/format-days-of-week "1234567"))))
 
 
 ;; --- format-time ---

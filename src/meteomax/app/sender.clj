@@ -11,25 +11,14 @@
             [taoensso.telemere :refer [log!]]))
 
 
-(defn- day-bit-index
-  [day-bit]
-  (int (/ (Math/log day-bit) (Math/log 2))))
-
-
 (defn- days-match?
-  "Check if current day matches subscription days bitmask."
+  "Check if current day matches subscription days string (1=пн … 7=вс)."
   [days-of-week]
-  (let [day-of-week (t/day-of-week (t/today))
-        day-bit (case day-of-week
-                  :monday 1
-                  :tuesday 2
-                  :wednesday 4
-                  :thursday 8
-                  :friday 16
-                  :saturday 32
-                  :sunday 64
+  (let [day-num (case (t/day-of-week (t/today))
+                  :monday 1 :tuesday 2 :wednesday 3 :thursday 4
+                  :friday 5 :saturday 6 :sunday 7
                   0)]
-    (bit-test days-of-week (day-bit-index day-bit))))
+    (str/includes? (str days-of-week) (str day-num))))
 
 
 (defn- time-match?

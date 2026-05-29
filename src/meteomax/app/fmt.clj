@@ -82,9 +82,39 @@
   time-str)
 
 
-(defn format-days-of-week [days-bitmask]
-  (let [days [[1 "пн"] [2 "вт"] [4 "ср"] [8 "чт"] [16 "пт"] [32 "сб"] [64 "вс"]]]
-    (->> days
-         (filter (fn [[bit _]] (bit-test days-bitmask (int (/ (Math/log bit) (Math/log 2))))))
+(def ^:private day-defs
+  [[1 "пн"] [2 "вт"] [3 "ср"] [4 "чт"] [5 "пт"] [6 "сб"] [7 "вс"]])
+
+
+(defn format-days-of-week [days]
+  (let [s (str days)]
+    (->> day-defs
+         (filter (fn [[d _]] (str/includes? s (str d))))
          (map second)
-         (str/join ","))))
+         (str/join ", "))))
+
+
+(defn format-sub-message [title time-str]
+  (str "🔹 <u>" title "</u>\n⏰ Время рассылки - " time-str))
+
+
+(defn format-sub-done [title time-str days sub-id]
+  (str (format-sub-message title time-str) 
+       "\n📅 " (format-days-of-week days) 
+       "\n/sub_" sub-id))
+
+
+(defn subscription-keyboard [sub-id days]
+  (let [s       (str days)
+        day-btn (fn [[d label]]
+                  {:type    "callback"
+                   :text    (if (str/includes? s (str d)) label "--")
+                   :payload (str "sub:day:" d ":" sub-id)})]
+    {:type    "inline_keyboard"
+     :payload {:buttons [[{:type "callback" :text "-1 ч"  :payload (str "sub:time:-60:" sub-id)}
+                          {:type "callback" :text "-10 м" :payload (str "sub:time:-10:" sub-id)}
+                          {:type "callback" :text "+10 м" :payload (str "sub:time:+10:" sub-id)}
+                          {:type "callback" :text "+1 ч"  :payload (str "sub:time:+60:" sub-id)}]
+                         (mapv day-btn day-defs)
+                         [{:type "callback" :text "✅ Ок"      :payload (str "sub:ok:" sub-id)}
+                          {:type "callback" :text "❌ Удалить" :payload (str "sub:delete:" sub-id)}]]}}))

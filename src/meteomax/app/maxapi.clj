@@ -118,6 +118,10 @@
     (request :post "/answers" token body {:callback_id callback-id})))
 
 
+(defn delete-message [token message-id]
+  (request :delete "/messages" token {} {:message_id message-id}))
+
+
 (defn get-me [token]
   (request :get "/me" token {}))
 

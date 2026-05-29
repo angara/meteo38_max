@@ -62,17 +62,108 @@
   [config db chat-id]
   (let [subs (subscriptions/get-user-subs db chat-id)]
     (if (empty? subs)
-      (send! config db chat-id
-             (str "У вас нет активных подписок.\n\n"
-                  "Используйте /sub для создания подписки на уведомления о погоде."))
+      (send! config db chat-id "У вас нет активных подписок.")
       (let [msg (str "📬 Ваши подписки:\n\n"
                      (str/join "\n\n"
-                               (map #(str "• " (:station_name %)
-                                          " в " (fmt/format-time (:time_str %))
-                                          " (" (fmt/format-days-of-week (:days_of_week %)) ")"
-                                          (when-not (:active %) " [выключена]"))
+                               (map (fn [sub]
+                                      (let [st-info (meteo-api/get-station-info config (:station_name sub))
+                                            title   (or (:title st-info) (:station_name sub))]
+                                        (str "🔹 <u>" title "</u>"
+                                             "\n" (:time_str sub)
+                                             ": " (fmt/format-days-of-week (:days_of_week sub))
+                                             "\n/sub_" (:id sub))))
                                     subs)))]
-        (send! config db chat-id msg)))))
+        (send! config db chat-id msg :format "html")))))
+
+
+(defn- adjust-time [time-str delta]
+  (let [[h m] (map #(Long/parseLong %) (str/split time-str #":"))
+        total  (mod (+ (* h 60) m delta) 1440)]
+    (format "%02d:%02d" (quot total 60) (mod total 60))))
+
+
+(defn- sub-answer [config callback-id sub]
+  (let [st-info (meteo-api/get-station-info config (:station_name sub))
+        title   (or (:title st-info) (:station_name sub))]
+    (maxapi/answer-callback (:max-api-token config) callback-id
+                            :message {:text        (fmt/format-sub-message title (:time_str sub))
+                                      :format      "html"
+                                      :attachments [(fmt/subscription-keyboard (:id sub) (:days_of_week sub))]})))
+
+
+(defn handle-sub-new [config db chat-id callback-id station-name]
+  (if (>= (count (subscriptions/get-user-subs db chat-id)) 20)
+    (do
+      (maxapi/answer-callback (:max-api-token config) callback-id
+                              :notification "Достигнут лимит подписок.")
+      (send! config db chat-id "Достигнут лимит подписок.\n/subs"))
+    (let [sub     (subscriptions/create-subscription! db chat-id station-name "08:00" "1234567")
+          st-info (meteo-api/get-station-info config (:station_name sub))
+          title   (or (:title st-info) (:station_name sub))]
+      (maxapi/answer-callback (:max-api-token config) callback-id
+                              :notification "Подписка создана")
+      (send! config db chat-id
+             (fmt/format-sub-message title (:time_str sub))
+             :format "html"
+             :attachments [(fmt/subscription-keyboard (:id sub) (:days_of_week sub))]))))
+
+
+(defn handle-sub-time [config db chat-id callback-id sub-id delta]
+  (if-let [sub (subscriptions/get-user-sub db sub-id chat-id)]
+    (sub-answer config callback-id
+                (subscriptions/update-sub! db sub-id
+                                           (adjust-time (:time_str sub) delta)
+                                           (:days_of_week sub)))
+    (maxapi/answer-callback (:max-api-token config) callback-id
+                            :notification "Подписка не найдена.")))
+
+
+(defn handle-sub-day [config db chat-id callback-id sub-id day-num]
+  (if-let [sub (subscriptions/get-user-sub db sub-id chat-id)]
+    (let [days     (str (:days_of_week sub))
+          day-str  (str day-num)
+          new-days (if (str/includes? days day-str)
+                     (str/replace days day-str "")
+                     (str/join (sort (str days day-str))))]
+      (sub-answer config callback-id
+                  (subscriptions/update-sub! db sub-id (:time_str sub) new-days)))
+    (maxapi/answer-callback (:max-api-token config) callback-id
+                            :notification "Подписка не найдена.")))
+
+
+(defn handle-sub-edit [config db chat-id sub-id]
+  (if-let [sub (subscriptions/get-user-sub db sub-id chat-id)]
+    (let [st-info (meteo-api/get-station-info config (:station_name sub))
+          title   (or (:title st-info) (:station_name sub))]
+      (send! config db chat-id
+             (fmt/format-sub-message title (:time_str sub))
+             :format "html"
+             :attachments [(fmt/subscription-keyboard (:id sub) (:days_of_week sub))]))
+    (send! config db chat-id "Подписка не найдена.")))
+
+
+(defn handle-sub-ok [config db chat-id callback-id sub-id]
+  (if-let [sub (subscriptions/get-user-sub db sub-id chat-id)]
+    (let [st-info (meteo-api/get-station-info config (:station_name sub))
+          title   (or (:title st-info) (:station_name sub))]
+      (maxapi/answer-callback (:max-api-token config) callback-id
+                              :message {:text        (fmt/format-sub-done title (:time_str sub) (:days_of_week sub) (:id sub))
+                                        :format      "html"
+                                        :attachments []}))
+    (maxapi/answer-callback (:max-api-token config) callback-id
+                            :notification "Подписка не найдена.")))
+
+
+(defn handle-sub-delete [config db chat-id callback-id message-id sub-id]
+  (if-let [sub (subscriptions/get-user-sub db sub-id chat-id)]
+    (do
+      (subscriptions/delete-sub! db (:id sub))
+      (maxapi/answer-callback (:max-api-token config) callback-id
+                              :notification "Подписка удалена")
+      (maxapi/delete-message (:max-api-token config) message-id)
+      (handle-subs config db chat-id))
+    (maxapi/answer-callback (:max-api-token config) callback-id
+                            :notification "Подписка не найдена.")))
 
 
 (defn handle-fav-toggle [config db chat-id callback-id station-name]

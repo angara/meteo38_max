@@ -23,7 +23,7 @@
 | `chat_id`      | `TEXT NOT NULL`      | Чат, в который отправляется уведомление                                                              |
 | `station_name` | `TEXT NOT NULL`      | Идентификатор метеостанции                                                                           |
 | `time_str`     | `TEXT NOT NULL`      | Время уведомления в формате `HH:MM`                                                                  |
-| `days_of_week` | `TEXT NOT NULL`      | Строка цифр — дни недели (пн=1 … вс=7). Например: `"135"` = пн, ср, пт; `"1234567"` = каждый день |
+| `days_of_week` | `TEXT NOT NULL`      | Строка цифр 1–7 (пн=1, вт=2, ср=3, чт=4, пт=5, сб=6, вс=7). Например: `"135"` = пн, ср, пт; `"1234567"` = каждый день |
 | `active`       | `BOOLEAN NOT NULL`   | Подписка активна (по умолчанию `true`)                                                               |
 
 Миграции: `resources/migrations/`.
@@ -95,7 +95,7 @@
 
 ## MAX Bot API
 
-Документация: [dev.max.ru](https://dev.max.ru/docs). Базовый URL: `https://platform-api.max.ru`.
+Документация: [dev.max.ru](https://dev.max.ru/docs), [dev.tamtam.chat](https://dev.tamtam.chat/). Базовый URL: `https://platform-api.max.ru`.
 
 ### Входящий Update (webhook)
 

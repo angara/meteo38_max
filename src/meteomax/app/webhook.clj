@@ -39,14 +39,19 @@
 
 
 (defn- handle-command [config db chat-id user text]
-  (case (-> text str/trim str/lower-case)
-    "/start" (do (command/handle-start config db chat-id user) true)
-    "/help"  (do (command/handle-help config db chat-id) true)
-    "/favs"  (do (command/handle-favs config db chat-id) true)
-    "."      (do (command/handle-favs config db chat-id) true)
-    "/subs"  (do (command/handle-subs config db chat-id) true)
-    ","      (do (command/handle-subs config db chat-id) true)
-    nil))
+  (let [cmd (-> text str/trim str/lower-case)]
+    (cond
+      (= cmd "/start")               (do (command/handle-start config db chat-id user) true)
+      (= cmd "/help")                (do (command/handle-help config db chat-id) true)
+      (= cmd "/favs")                (do (command/handle-favs config db chat-id) true)
+      (= cmd ".")                    (do (command/handle-favs config db chat-id) true)
+      (= cmd "/subs")                (do (command/handle-subs config db chat-id) true)
+      (= cmd ",")                    (do (command/handle-subs config db chat-id) true)
+      (str/starts-with? cmd "/sub_")
+      (when-let [sub-id (try (Long/parseLong (subs cmd (count "/sub_")))
+                             (catch NumberFormatException _ nil))]
+        (command/handle-sub-edit config db chat-id sub-id)
+        true))))
 
 
 (defn- handle-location-message [config db chat-id message]
@@ -85,7 +90,8 @@
 (defn- handle-message-callback [config db update]
   (let [callback-id (some-> update :callback :callback_id)
         payload     (some-> update :callback :payload)
-        chat-id     (str (some-> update :message :recipient :chat_id))]
+        chat-id     (str (some-> update :message :recipient :chat_id))
+        message-id  (some-> update :message :body :mid)]
     (log! {:id :webhook/callback-received
            :msg "Callback update received"
            :data {:chat-id chat-id :payload payload}})
@@ -93,6 +99,30 @@
       (str/starts-with? payload "fav:toggle:")
       (command/handle-fav-toggle config db chat-id callback-id
                                  (subs payload (count "fav:toggle:")))
+
+      (str/starts-with? payload "sub:new:")
+      (command/handle-sub-new config db chat-id callback-id
+                              (subs payload (count "sub:new:")))
+
+      (str/starts-with? payload "sub:time:")
+      (let [parts  (str/split (subs payload (count "sub:time:")) #":")
+            delta  (Long/parseLong (first parts))
+            sub-id (Long/parseLong (second parts))]
+        (command/handle-sub-time config db chat-id callback-id sub-id delta))
+
+      (str/starts-with? payload "sub:day:")
+      (let [parts  (str/split (subs payload (count "sub:day:")) #":")
+            bit    (Long/parseLong (first parts))
+            sub-id (Long/parseLong (second parts))]
+        (command/handle-sub-day config db chat-id callback-id sub-id bit))
+
+      (str/starts-with? payload "sub:ok:")
+      (command/handle-sub-ok config db chat-id callback-id
+                             (Long/parseLong (subs payload (count "sub:ok:"))))
+
+      (str/starts-with? payload "sub:delete:")
+      (command/handle-sub-delete config db chat-id callback-id message-id
+                                 (Long/parseLong (subs payload (count "sub:delete:"))))
 
       :else
       (log! {:id :webhook/callback-unhandled
