@@ -54,7 +54,7 @@ lint:
 	clj-kondo --lint src
 
 check-reflect:
-	clojure -M -e "(set! *warn-on-reflection* true) (require 'meteomax.app.webhook 'meteomax.app.dispatch 'meteomax.app.subs 'meteomax.app.sender 'meteomax.app.command 'meteomax.db.subscriptions 'meteomax.db.users 'meteomax.app.fmt 'meteomax.main 'meteomax.app.maxapi 'meteomax.lib.random 'meteomax.config 'meteomax.db.pg 'meteomax.metrics.reg 'meteomax.metrics.export 'meteomax.app.meteo-api 'meteomax.lib.envvar)"
+	clojure -M -e "(set! *warn-on-reflection* true) (require 'meteomax.app.webhook 'meteomax.app.sender 'meteomax.app.command 'meteomax.db.subs 'meteomax.db.users 'meteomax.app.fmt 'meteomax.main 'meteomax.app.maxapi 'meteomax.lib.random 'meteomax.config 'meteomax.db.pg 'meteomax.metrics.reg 'meteomax.metrics.export 'meteomax.meteo-data.core 'meteomax.lib.envvar)"
 
 test:
 	clj -M:test

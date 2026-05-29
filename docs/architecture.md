@@ -22,17 +22,16 @@ src/meteomax/
   config.clj
   app/
     command.clj
-    dispatch.clj
     fmt.clj
     maxapi.clj
-    meteo_api.clj
     sender.clj
-    subs.clj
     webhook.clj
   db/
     pg.clj
     users.clj
-    subscriptions.clj
+    subs.clj
+  meteo_data/
+    core.clj
   lib/
     envvar.clj
     random.clj
@@ -102,7 +101,7 @@ PostgreSQL доступен через **pg2** (`pg.core`).
 ### DB-модули
 
 - `meteomax.db.users` - пользователи, геопозиция, избранные станции
-- `meteomax.db.subscriptions` - подписки на погодные уведомления
+- `meteomax.db.subs` - подписки на погодные уведомления
 
 Текущий слой БД использует параметризованные SQL-строки через `pg/execute`, а не HoneySQL.
 
@@ -110,39 +109,49 @@ PostgreSQL доступен через **pg2** (`pg.core`).
 
 ```clojure
 (pg/execute db
-            "select * from subscriptions where chat_id = $1"
-            {:params [chat-id]})
+            "select * from subs where user_id = $1"
+            {:params [user-id]})
 ```
 
-### Предполагаемая схема таблиц
+### Схема таблиц
 
-`users`
+#### users
 
-- `chat_id`
-- `username`
-- `first_name`
-- `latitude`
-- `longitude`
-- `favorites`
+| Колонка            | Тип                | Описание                                        |
+|--------------------|--------------------|-------------------------------------------------|
+| `user_id`          | `TEXT PRIMARY KEY` | Идентификатор пользователя в MAX Bot API        |
+| `chat_id`          | `TEXT`             | Идентификатор приватного чата с ботом           |
+| `created_at`       | `TIMESTAMPTZ`      | Дата первого обращения                          |
+| `updated_at`       | `TIMESTAMPTZ`      | Дата последнего обновления профиля              |
+| `username`         | `TEXT`             | Логин пользователя (nullable)                   |
+| `last_send_at`     | `TIMESTAMPTZ`      | Время последней отправки уведомления (nullable) |
+| `last_send_status` | `TEXT`             | Статус последней отправки (nullable)            |
+| `favs`             | `TEXT[]`           | Массив названий избранных станций               |
+| `location`         | `JSONB[]`          | История геопозиций                              |
+| `info`             | `JSONB`            | Дополнительные данные пользователя              |
 
-`subscriptions`
+#### subs
 
-- `id`
-- `chat_id`
-- `station_name`
-- `time_str`
-- `days_of_week`
-- `active`
+| Колонка        | Тип                  | Описание                                              |
+|----------------|----------------------|-------------------------------------------------------|
+| `id`           | `SERIAL PRIMARY KEY` | Авто-инкремент                                        |
+| `user_id`      | `TEXT NOT NULL`      | Идентификатор пользователя (без FK-ограничения)       |
+| `chat_id`      | `TEXT NOT NULL`      | Чат, в который отправляется уведомление               |
+| `station_name` | `TEXT NOT NULL`      | Идентификатор метеостанции                            |
+| `time_str`     | `TEXT NOT NULL`      | Время уведомления в формате `HH:MM`                   |
+| `days_of_week` | `TEXT NOT NULL`      | Строка цифр — дни недели (пн=1 … вс=7). Например: `"135"` = пн, ср, пт; `"1234567"` = каждый день |
+| `active`       | `BOOLEAN`            | Подписка активна (DEFAULT true)                       |
+| `created_at`   | `TIMESTAMPTZ`        | Дата создания подписки                                |
 
 ### Миграции
 
-Документационно проект ориентирован на миграции в `resources/migrations/`, но в текущем репозитории migration-файлы отсутствуют. Если схема меняется, миграции нужно добавить вместе с кодом.
+Миграции хранятся в `resources/migrations/`. При изменении схемы миграции добавляются вместе с кодом.
 
 ## HTTP интеграции
 
 ### Meteo API
 
-`meteomax.app.meteo-api` использует **http-kit** как HTTP клиент и **core.memoize** для TTL-кэша.
+`meteomax.meteo-data.core` использует **http-kit** как HTTP клиент и **core.memoize** для TTL-кэша.
 
 - `get-active-stations`
 - `get-station-info`
@@ -189,20 +198,11 @@ Webhook реализован в `meteomax.app.webhook`.
 
 - `/start`
 - `/help`
-- `/near`
-- `/active`
 - `/favs`
-- `/info`
 - `/subs`
-- `/sub`
 
-`/sub` в текущей реализации создаёт подписку по строке формата:
-
-```text
-/sub <station> <HH:MM> <days>
-```
-
-Парсинг этой команды вынесен в `meteomax.app.subs/parse-subscription-input`.
+Текстовые сообщения длиной 3+ символа обрабатываются как поисковый запрос по станциям.
+Геопозиция возвращает 5 ближайших активных станций.
 
 ## Планировщик
 
@@ -210,9 +210,9 @@ Webhook реализован в `meteomax.app.webhook`.
 
 Пайплайн:
 
-1. Прочитать активные подписки через `meteomax.db.subscriptions/get-all-active-subs`
+1. Прочитать активные подписки через `meteomax.db.subs/get-all-active-subs`
 2. Проверить совпадение дня недели и времени
-3. Получить актуальную погоду через `meteomax.app.meteo-api`
+3. Получить актуальную погоду через `meteomax.meteo-data.core`
 4. Отправить сообщение через `meteomax.app.maxapi/send-message`
 
 ## Метрики
