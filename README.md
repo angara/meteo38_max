@@ -6,68 +6,39 @@
 
 Бот получает данные о погоде со станций проекта [meteo38.ru](https://github.com/angara/meteo_data) и позволяет пользователям:
 
-- Просматривать текущую погоду на ближайших станциях
-- Получать информацию о конкретных метеостанциях
-- Настраивать автоматические уведомления о погоде в заданное время
-- Искать станции по названию или местоположению
+- Просматривать текущую погоду на ближайших станциях по геопозиции или поиску
 - Добавлять станции в избранное
+- Настраивать автоматические уведомления в заданное время
 
-## Архитектура
+## Команды бота
 
-Проект построен на Clojure и использует следующие компоненты:
+| Команда | Описание |
+|---------|----------|
+| `/start` | Приветственное сообщение |
+| `/help` | Справка по командам |
+| `/favs` или `.` | Избранные станции |
+| `/subs` или `,` | Список подписок |
+| текст 3+ символа | Поиск станций по названию |
+| геопозиция | 5 ближайших станций |
 
-- **Mount** - управление жизненным циклом компонентов
-- **http-kit** - HTTP клиент для API meteo_data и MAX API, HTTP сервер для webhook и метрик
-- **Malli** - валидация конфигурации
-- **pg2** - работа с PostgreSQL
-- **Chime** - планировщик для рассылок
-- **iapetos** - Prometheus метрики
-- **telemere** - логирование
+## Быстрый старт
 
-### Структура проекта
-
-```
-src/
-└── meteomax/
-    ├── main.clj              # Точка входа
-    ├── config.clj            # Конфигурация
-    ├── app/
-    │   ├── command.clj       # Обработчики команд
-    │   ├── dispatch.clj      # Маршрутизация update'ов
-    │   ├── fmt.clj           # Форматирование данных
-    │   ├── maxapi.clj        # Клиент MAX Bot API
-    │   ├── meteo_api.clj     # Клиент meteo_data API
-    │   ├── sender.clj        # Планировщик рассылок
-    │   ├── subs.clj          # Парсинг и форматирование подписок
-    │   └── webhook.clj       # Webhook сервер и регистрация webhook
-    ├── db/
-    │   ├── pg.clj            # PostgreSQL connection pool
-    │   ├── users.clj         # SQL-запросы к пользователям
-    │   └── subscriptions.clj # SQL-запросы к подпискам
-    ├── lib/
-    │   ├── envvar.clj        # Утилиты для env переменных
-    │   └── random.clj        # Secure random генерация секретов
-    └── metrics/
-        ├── export.clj        # HTTP endpoint для метрик
-        └── reg.clj           # Определение метрик
+```bash
+cp .env.example .env   # заполнить переменные
+make dev-env           # запустить PostgreSQL
+make dev               # запустить REPL
 ```
 
-## API meteo_data
+Подробнее: [docs/development.md](docs/development.md)
 
-Бот использует API из [github.com/angara/meteo_data](https://github.com/angara/meteo_data):
+## Документация
 
-### Доступные эндпоинты
+- [docs/architecture.md](docs/architecture.md) — архитектура, lifecycle, интеграции
+- [docs/data.md](docs/data.md) — схема БД, структуры Meteo API и MAX Bot API
+- [docs/development.md](docs/development.md) — окружение, сборка, тесты
+- [docs/coding_style.md](docs/coding_style.md) — правила оформления кода
 
-- **GET /meteo/api/active-stations** - список активных станций
-  - Параметры: `search?`, `lat?`, `lon?`, `last-hours?`
-  
-- **GET /meteo/api/station-info** - информация о станции
-  - Параметры: `st` (название станции)
-  
-- **GET /meteo/api/station-hourly** - почасовые данные
-  - Параметры: `st`, `ts-beg?`, `ts-end?`
-
-### Метеопараметры
+## Метеопараметры
 
 | Код | Описание | Единица |
 |-----|----------|---------|
@@ -77,121 +48,15 @@ src/
 | `h` | Относительная влажность | % |
 | `w` | Скорость ветра | м/с |
 | `g` | Скорость порывов ветра | м/с |
-| `b` | Направление ветра | градусы (0-360) |
+| `b` | Направление ветра | градусы (0–360) |
 | `r` | Осадки | мм |
-
-## Настройка и установка
-
-### Требования
-
-- Java 21+
-- Clojure CLI tools
-- PostgreSQL 14+
-- MAX Bot API токен (получить через [MAX для разработчиков](https://dev.max.ru/docs))
-
-### Конфигурация
-
-Необходимые переменные окружения:
-
-| Переменная | Обязательна | По умолчанию | Описание |
-|------------|-------------|--------------|----------|
-| `MAX_API_TOKEN` | Да | - | Токен бота MAX |
-| `DATABASE_URL` | Да | - | PostgreSQL connection URI |
-| `METEO_API_URL` | Нет | `https://angara.net/meteo/api` | URL API meteo_data |
-| `METEO_API_AUTH` | Да | - | Заголовок авторизации для meteo API |
-| `METEO_API_TIMEOUT` | Нет | `5000` | Таймаут HTTP запросов (мс) |
-| `METRICS_BIND` | Нет | `localhost` | Адрес сервера метрик |
-| `METRICS_PORT` | Нет | `7937` | Порт сервера метрик |
-| `WEBHOOK_BIND` | Нет | `localhost` | Адрес webhook сервера |
-| `WEBHOOK_PORT` | Нет | `8005` | Порт webhook сервера |
-| `WEBHOOK_URL` | Да | - | Публичный URL webhook для регистрации в MAX API |
-| `WEBHOOK_PATH` | Нет | путь из `WEBHOOK_URL` | Локальный path webhook endpoint |
-| `TIMEZONE` | Нет | `Asia/Irkutsk` | Часовой пояс приложения |
-
-### Запуск в разработке
-
-```bash
-# Установка зависимостей
-make install
-
-# Запуск REPL
-make dev
-
-# Линтинг
-make lint
-```
-
-### Сборка и запуск
-
-```bash
-# Сборка uberjar
-make build
-
-# Запуск
-make run
-```
-
-### Docker
-
-```bash
-# Сборка образа
-make docker-build
-
-# Запуск контейнера
-make docker-run
-```
-
-## Команды бота
-
-| Команда | Описание |
-|---------|----------|
-| `/start` | Приветственное сообщение |
-| `/help` | Справка по командам |
-| `/near` | Ближайшие станции (по геолокации) |
-| `/active` | Список активных станций |
-| `/favs` | Избранные станции |
-| `/info <станция>` | Информация о станции |
-| `/subs` | Список подписок |
-| `/sub <станция> <HH:MM> <дни>` | Создать подписку |
-
-## Метрики
-
-Бот экспортирует Prometheus метрики на `http://localhost:7937/metrics`:
-
-- Количество обработанных сообщений
-- Время обработки запросов
-- Количество ошибок API
-- Активные подписки
-
-## Развертывание
-
-### Systemd
-
-Используйте файл `maxbot.service`:
-
-```ini
-[Unit]
-Description=MAX Weather Bot
-After=network.target
-
-[Service]
-Type=simple
-User=maxbot
-WorkingDirectory=/opt/maxbot
-ExecStart=/usr/bin/java -jar target/maxbot-standalone.jar
-EnvironmentFile=/etc/maxbot/.env
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-```
-
-## Лицензия
-
-MIT
 
 ## Ссылки
 
 - [MAX для разработчиков](https://dev.max.ru/docs)
 - [meteo_data API](https://github.com/angara/meteo_data)
 - [meteo38_bot (референс)](https://github.com/angara/meteo38_bot)
+
+## Лицензия
+
+MIT

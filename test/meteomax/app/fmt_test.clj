@@ -1,5 +1,6 @@
 (ns meteomax.app.fmt-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
             [meteomax.app.fmt :as fmt]))
 
 (def ^:private wind-arrow  #'fmt/wind-arrow)
@@ -68,25 +69,25 @@
                  :descr "г. Иркутск, ул. Ширямова, 101"
                  :elev 495.0 :distance 2066.8
                  :last {:t -20.0 :t_delta 0.0 :p 986.0 :w 3.0 :g 14.0 :b 80.0}})
-        lines (clojure.string/split-lines result)]
-    (is (clojure.string/includes? result "🔹 Иркутский аэропорт"))
-    (is (clojure.string/includes? result "г. Иркутск, ул. Ширямова, 101"))
-    (is (clojure.string/includes? result "^495 м"))
-    (is (clojure.string/includes? result "(2 км)"))
-    (is (clojure.string/includes? (last lines) "-20°C"))
-    (is (clojure.string/includes? (last lines) "мм.рт.ст."))
-    (is (clojure.string/includes? (last lines) "м/с"))))
+        lines (str/split-lines result)]
+    (is (str/includes? result "🔹 Иркутский аэропорт"))
+    (is (str/includes? result "г. Иркутск, ул. Ширямова, 101"))
+    (is (str/includes? result "^495 м"))
+    (is (str/includes? result "(2 км)"))
+    (is (str/includes? (last lines) "-20°C"))
+    (is (str/includes? (last lines) "мм.рт.ст."))
+    (is (str/includes? (last lines) "м/с"))))
 
 (deftest format-station-brief-no-weather
   (let [result (fmt/format-station-brief {:st "abc" :title "Тест"
                                           :descr "Описание"})]
-    (is (clojure.string/includes? result "🔹 Тест"))
-    (is (clojure.string/includes? result "Описание"))))
+    (is (str/includes? result "🔹 Тест"))
+    (is (str/includes? result "Описание"))))
 
 (deftest format-station-brief-no-optional-fields
   (let [result (fmt/format-station-brief {:st "abc" :title "Тест"})]
-    (is (clojure.string/includes? result "🔹 Тест"))
-    (is (not (clojure.string/includes? result "null")))))
+    (is (str/includes? result "🔹 Тест"))
+    (is (not (str/includes? result "null")))))
 
 
 ;; --- format-station-info ---
@@ -97,34 +98,34 @@
                  :descr "г. Иркутск"
                  :elev 495.0
                  :last {:t -20.0 :t_delta 0.0 :p 986.0 :w 3.0 :g 14.0 :b 80.0}})]
-    (is (clojure.string/includes? result "🔹 Иркутский аэропорт"))
-    (is (clojure.string/includes? result "г. Иркутск"))
-    (is (clojure.string/includes? result "-20°C"))
-    (is (clojure.string/includes? result "мм.рт.ст."))
-    (is (clojure.string/includes? result "м/с"))
-    (is (clojure.string/includes? result "/info uiii  ^495 м"))))
+    (is (str/includes? result "🔹 Иркутский аэропорт"))
+    (is (str/includes? result "г. Иркутск"))
+    (is (str/includes? result "-20°C"))
+    (is (str/includes? result "мм.рт.ст."))
+    (is (str/includes? result "м/с"))
+    (is (str/includes? result "/info uiii  ^495 м"))))
 
 (deftest format-station-info-temperature-trend
   (testing "rising trend"
     (let [result (fmt/format-station-info
                   {:st "x" :title "X" :last {:t 5.0 :t_delta 1.5}})]
-      (is (clojure.string/includes? result "↑"))))
+      (is (str/includes? result "↑"))))
 
   (testing "falling trend"
     (let [result (fmt/format-station-info
                   {:st "x" :title "X" :last {:t 5.0 :t_delta -1.5}})]
-      (is (clojure.string/includes? result "↓"))))
+      (is (str/includes? result "↓"))))
 
   (testing "stable — no arrow"
     (let [result (fmt/format-station-info
                   {:st "x" :title "X" :last {:t 5.0 :t_delta 0.5}})]
-      (is (not (clojure.string/includes? result "↑")))
-      (is (not (clojure.string/includes? result "↓"))))))
+      (is (not (str/includes? result "↑")))
+      (is (not (str/includes? result "↓"))))))
 
 (deftest format-station-info-no-weather
   (let [result (fmt/format-station-info {:st "abc" :title "Тест" :last nil})]
-    (is (clojure.string/includes? result "🔹 Тест"))
-    (is (clojure.string/includes? result "/info abc"))))
+    (is (str/includes? result "🔹 Тест"))
+    (is (str/includes? result "/info abc"))))
 
 
 ;; --- format-days-of-week ---

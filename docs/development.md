@@ -2,81 +2,73 @@
 
 ## Переменные окружения
 
-Локальные переменные окружения загружаются из файла `.env` (не коммитится в git).
-
-Аннотированные примеры всех переменных находятся в `.env.example`.
+Локальные переменные загружаются из `.env` (не коммитится). Пример — `.env.example`.
 
 ```bash
 cp .env.example .env
 ```
 
-Основные переменные:
-- `MAX_API_TOKEN` - токен MAX Bot API
-- `DATABASE_URL` - PostgreSQL connection URI
-- `METEO_API_URL` - базовый URL Meteo API
-- `METEO_API_AUTH` - авторизация для Meteo API
-- `METEO_API_TIMEOUT` - таймаут HTTP запросов (мс)
-- `WEBHOOK_URL` - публичный URL webhook для регистрации в MAX API
-- `WEBHOOK_PATH` - path webhook endpoint, если нужно переопределить путь из `WEBHOOK_URL`
-- `WEBHOOK_BIND` - адрес локального webhook сервера
-- `WEBHOOK_PORT` - порт локального webhook сервера
-- `METRICS_PORT` - порт metrics сервера
-- `METRICS_BIND` - адрес metrics сервера
-- `TIMEZONE` - таймзона приложения
+| Переменная          | Обязательна | По умолчанию                       | Описание                                          |
+|---------------------|-------------|------------------------------------|---------------------------------------------------|
+| `MAX_API_TOKEN`     | Да          | —                                  | Токен бота MAX                                    |
+| `DATABASE_URL`      | Да          | —                                  | PostgreSQL connection URI                         |
+| `METEO_API_AUTH`    | Да          | —                                  | Заголовок авторизации для meteo API               |
+| `WEBHOOK_URL`       | Да          | —                                  | Публичный URL webhook для регистрации в MAX API   |
+| `METEO_API_URL`     | Нет         | `https://angara.net/meteo/api`     | URL API meteo_data                                |
+| `METEO_API_TIMEOUT` | Нет         | `5000`                             | Таймаут HTTP запросов (мс)                        |
+| `WEBHOOK_PATH`      | Нет         | путь из `WEBHOOK_URL`              | Переопределить path webhook endpoint              |
+| `WEBHOOK_BIND`      | Нет         | `localhost`                        | Адрес локального webhook сервера                  |
+| `WEBHOOK_PORT`      | Нет         | `8005`                             | Порт локального webhook сервера                   |
+| `METRICS_BIND`      | Нет         | `localhost`                        | Адрес сервера метрик                              |
+| `METRICS_PORT`      | Нет         | `7937`                             | Порт сервера метрик                               |
+| `TIMEZONE`          | Нет         | `Asia/Irkutsk`                     | Часовой пояс приложения                           |
 
 ## Dev-окружение
 
 ```bash
 make dev-env        # запустить PostgreSQL в Docker
-make dev            # запустить nREPL (в отдельном терминале)
+make dev            # запустить nREPL
 make dev-env-stop   # остановить PostgreSQL
 ```
 
-Конфигурация PostgreSQL для разработки — `docker-compose.dev.yml`:
-- Порт: `5432`
-- База: `meteomax`
-- Пользователь/пароль: `meteomax` / `meteomax`
+PostgreSQL (`docker-compose.dev.yml`): порт `5437`, база/пользователь/пароль — `meteomax`.
 
-Make-команды:
+## Make-команды
 
-| Команда | Описание |
-|----------|-----------|
-| `make dev-env` | Запустить PostgreSQL в Docker |
-| `make dev` | Запустить nREPL с dev конфигом |
-| `make dev-env-stop` | Остановить PostgreSQL |
-| `make install` | Загрузить все зависимости |
-| `make build` | Собрать uberjar |
-| `make check-reflect` | Проверить reflection warnings |
+| Команда             | Описание                              |
+|---------------------|---------------------------------------|
+| `make dev-env`      | Запустить PostgreSQL в Docker         |
+| `make dev`          | Запустить nREPL с dev конфигом        |
+| `make dev-env-stop` | Остановить PostgreSQL                 |
+| `make install`      | Загрузить зависимости                 |
+| `make build`        | Собрать uberjar                       |
+| `make run`          | Запустить uberjar                     |
+| `make lint`         | Запустить clj-kondo                   |
+| `make check-reflect`| Проверить reflection warnings         |
+| `make test`         | Запустить тесты                       |
 
 ## Сборка
 
-Использовать **tools.build**:
-
 ```bash
-clojure -T:build uber
+make build
+# результат: target/meteomax-1.0.X-standalone.jar
+
+make run
 ```
 
-Результат: `target/meteomax-1.0.X-standalone.jar`
-
-## Линтинг
-
-Использовать **clj-kondo**:
+## Тесты
 
 ```bash
-make lint
+make test
 # или
-clj-kondo --lint src
+clojure -M:test -e "(require 'clojure.test ...) (clojure.test/run-all-tests #\"meteomax.*\")"
 ```
 
-Конфигурация в `.clj-kondo/config.edn`:
-```edn
-{:lint-as {pg.core/with-transaction clojure.core/let}}
-```
-
-## Reflection
-
-Для модулей с Java interop проверяйте reflection warnings:
+## Линтинг и проверки
 
 ```bash
-make check-reflect
+make lint           # clj-kondo по src/
+make check-reflect  # reflection warnings для Java interop
 ```
+
+`check-reflect` нужен при добавлении или изменении Java interop (`.method`, `new`, type hints).

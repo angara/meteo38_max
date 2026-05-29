@@ -1,10 +1,8 @@
 (ns meteomax.main
   (:require [mount.core :as mount]
             [meteomax.app.maxapi :as maxapi]
-            [meteomax.config :as config]
-            [meteomax.db.pg :as pg]
-            [meteomax.app.sender :as sender]
             [meteomax.app.webhook]
+            [meteomax.config :as config]
             [meteomax.metrics.export :as export]
             [taoensso.telemere :refer [log!]])
   (:gen-class))
