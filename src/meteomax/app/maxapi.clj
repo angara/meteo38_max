@@ -55,6 +55,35 @@
         nil)))))
 
 
+(defn- request-result
+  "Like request, but returns {:ok true} or {:ok false :error-code N}."
+  [http-method endpoint token params query-params]
+  (let [url  (make-url endpoint)
+        opts (cond-> (request-opts token)
+               query-params (assoc :query-params query-params))]
+    (log! {:level :debug
+           :id    :maxapi/request
+           :data  {:method http-method :endpoint endpoint :params params}})
+    (try
+      (let [{:keys [status body]} @(http-call http-method url opts params)
+            parsed (try (json/read-value body json/keyword-keys-object-mapper)
+                        (catch Exception _ nil))]
+        (if (= 200 status)
+          {:ok true}
+          (do
+            (log! {:level :warn
+                   :id    :maxapi/response-error
+                   :msg   "MAX API error"
+                   :data  {:status status :body body}})
+            {:ok false :error-code (:code parsed)})))
+      (catch Exception e
+        (log! {:level :error
+               :id    :maxapi/request-exception
+               :msg   "MAX API exception"
+               :data  {:method http-method :endpoint endpoint :error (ex-message e)}})
+        {:ok false :error-code :exception}))))
+
+
 (defn get-updates [token]
   (request :get "/updates" token {}))
 
@@ -74,7 +103,7 @@
                format (assoc :format (name format))
                attachments (assoc :attachments attachments)
                link (assoc :link link))]
-    (request :post "/messages" token body {:chat_id chat-id})))
+    (request-result :post "/messages" token body {:chat_id chat-id})))
 
 
 (defn send-location [token chat-id latitude longitude]
@@ -82,11 +111,11 @@
     (request :post "/messages" token {:text "" :attachments [location-attachment]} {:chat_id chat-id})))
 
 
-(defn answer-callback [token callback-query-id & {:keys [text show-alert]}]
-  (let [params (cond-> {:callback_query_id callback-query-id}
-                 text (assoc :text text)
-                 show-alert (assoc :show_alert show-alert))]
-    (request :post "/answers" token params)))
+(defn answer-callback [token callback-id & {:keys [notification message]}]
+  (let [body (cond-> {}
+               notification (assoc :notification notification)
+               message      (assoc :message message))]
+    (request :post "/answers" token body {:callback_id callback-id})))
 
 
 (defn get-me [token]

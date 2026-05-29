@@ -7,10 +7,11 @@
   [db chat-id userinfo]
   (first
    (pg/execute db
-               "insert into users (chat_id, userinfo)
-                values ($1, $2)
+               "insert into users (chat_id, userinfo, active)
+                values ($1, $2, true)
                 on conflict (chat_id) do update
                 set userinfo   = excluded.userinfo,
+                    active     = true,
                     updated_at = now()
                 returning *"
                {:params [chat-id userinfo]})))
@@ -50,18 +51,24 @@
       []))
 
 
-(defn add-favorite!
-  [db chat-id station-name]
+(defn set-active!
+  [db chat-id active?]
+  (pg/execute db
+              "update users
+               set active = $2, updated_at = now()
+               where chat_id = $1
+                 and (active is distinct from $2)"
+              {:params [chat-id active?]}))
+
+
+(defn set-favs!
+  [db chat-id favs]
   (first
    (pg/execute db
                "insert into users (chat_id, favs)
                 values ($1, $2)
                 on conflict (chat_id) do update
-                set favs = case
-                             when coalesce(users.favs, '[]'::jsonb) @> excluded.favs
-                               then coalesce(users.favs, '[]'::jsonb)
-                             else coalesce(users.favs, '[]'::jsonb) || excluded.favs
-                           end,
+                set favs       = excluded.favs,
                     updated_at = now()
                 returning favs"
-               {:params [chat-id [station-name]]})))
+               {:params [chat-id favs]})))

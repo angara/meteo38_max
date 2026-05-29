@@ -15,7 +15,7 @@
 
 
 (defn- header-secret [req]
-  (get-in req [:headers "x-max-bot-api-secret"]))
+  (some-> req :headers (get "x-max-bot-api-secret")))
 
 
 (defn valid-secret? [expected-secret req]
@@ -40,12 +40,12 @@
 
 (defn- handle-command [config db chat-id user text]
   (case (-> text str/trim str/lower-case)
-    "/start" (command/handle-start config db chat-id user)
-    "/help"  (command/handle-help config chat-id)
-    "/favs"  (command/handle-favs config db chat-id)
-    "."      (command/handle-favs config db chat-id)
-    "/subs"  (command/handle-subs config db chat-id)
-    ","      (command/handle-subs config db chat-id)
+    "/start" (do (command/handle-start config db chat-id user) true)
+    "/help"  (do (command/handle-help config db chat-id) true)
+    "/favs"  (do (command/handle-favs config db chat-id) true)
+    "."      (do (command/handle-favs config db chat-id) true)
+    "/subs"  (do (command/handle-subs config db chat-id) true)
+    ","      (do (command/handle-subs config db chat-id) true)
     nil))
 
 
@@ -63,8 +63,8 @@
 (defn- handle-message-created
   [config db update]
   (let [message (:message update)
-        chat-id (str (or (:chat_id update) (get-in message [:recipient :chat_id])))
-        text    (get-in message [:body :text])
+        chat-id (str (or (:chat_id update) (some-> message :recipient :chat_id)))
+        text    (some-> message :body :text)
         user    (:sender message)]
     (cond
       (seq text)
@@ -82,10 +82,22 @@
              :data {:chat-id chat-id}}))))
 
 
-(defn- handle-message-callback [_config _db update]
-  (log! {:id :webhook/callback-received
-         :msg "Callback update received"
-         :data {:update update}}))
+(defn- handle-message-callback [config db update]
+  (let [callback-id (some-> update :callback :callback_id)
+        payload     (some-> update :callback :payload)
+        chat-id     (str (some-> update :message :recipient :chat_id))]
+    (log! {:id :webhook/callback-received
+           :msg "Callback update received"
+           :data {:chat-id chat-id :payload payload}})
+    (cond
+      (str/starts-with? payload "fav:toggle:")
+      (command/handle-fav-toggle config db chat-id callback-id
+                                 (subs payload (count "fav:toggle:")))
+
+      :else
+      (log! {:id :webhook/callback-unhandled
+             :msg "Unhandled callback payload"
+             :data {:payload payload}}))))
 
 
 (defn- handle-bot-started [config db update]

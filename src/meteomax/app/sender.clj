@@ -7,6 +7,7 @@
             [meteomax.app.maxapi :as maxapi]
             [meteomax.meteo-data.core :as meteo-api]
             [meteomax.db.subs :as subscriptions]
+            [meteomax.db.users :as users]
             [taoensso.telemere :refer [log!]]))
 
 
@@ -40,20 +41,30 @@
          (= (t/minute now) sub-min))))
 
 
+;;  TamTam/MAX error code when the user stops the bot
+(def ^:private bot-stopped-code 909)
+
 (defn- send-subscription
   "Send weather data for a subscription."
-  [config _db sub]
+  [config db sub]
   (try
     (let [station-info (meteo-api/get-station-info config (:station_name sub))
-          msg (str "🔔 Погода: " (:station_name sub) "\n\n"
-                   (fmt/format-station-info station-info))]
-      (maxapi/send-message
-       (:max-api-token config)
-       (:chat_id sub)
-       msg)
-      (log! {:level :info
-             :id    :sender/subscription-sent
-             :data  {:sub-id (:id sub) :chat-id (:chat_id sub)}}))
+          msg    (str "🔔 Погода: " (:station_name sub) "\n\n"
+                      (fmt/format-station-info station-info))
+          result (maxapi/send-message (:max-api-token config) (:chat_id sub) msg)]
+      (if (:ok result)
+        (log! {:level :info
+               :id    :sender/subscription-sent
+               :data  {:sub-id (:id sub) :chat-id (:chat_id sub)}})
+        (do
+          (when (= bot-stopped-code (:error-code result))
+            (log! {:level :info :id :sender/user-blocked-bot
+                   :msg "User blocked the bot, deactivating"
+                   :data {:chat-id (:chat_id sub)}})
+            (users/set-active! db (:chat_id sub) false))
+          (log! {:level :warn
+                 :id    :sender/subscription-failed
+                 :data  {:sub-id (:id sub) :error-code (:error-code result)}}))))
     (catch Exception e
       (log! {:level :error
              :id    :sender/subscription-failed

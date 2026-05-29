@@ -11,9 +11,8 @@
 | `updated_at`       | `TIMESTAMPTZ`      | Дата последнего обновления профиля              |
 | `userinfo`         | `JSONB`            | Данные профиля от MAX API (имя, username и др.) |
 | `favs`             | `JSONB`            | Избранные станции                               |
-| `last_send_at`     | `TIMESTAMPTZ`      | Время последней отправки уведомления (nullable) |
-| `last_send_status` | `TEXT`             | Статус последней отправки (nullable)            |
 | `last_latlon`      | `JSONB`            | Последняя геопозиция в формате `[lat, lon]`     |
+| `active`           | `BOOLEAN NOT NULL` | Пользователь активен (по умолчанию `true`)      |
 
 ### subs
 
@@ -25,6 +24,7 @@
 | `station_name` | `TEXT NOT NULL`      | Идентификатор метеостанции                                                                           |
 | `time_str`     | `TEXT NOT NULL`      | Время уведомления в формате `HH:MM`                                                                  |
 | `days_of_week` | `TEXT NOT NULL`      | Строка цифр — дни недели (пн=1 … вс=7). Например: `"135"` = пн, ср, пт; `"1234567"` = каждый день |
+| `active`       | `BOOLEAN NOT NULL`   | Подписка активна (по умолчанию `true`)                                                               |
 
 Миграции: `resources/migrations/`.
 

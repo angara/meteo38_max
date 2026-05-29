@@ -46,9 +46,10 @@
   (str "https://angara.net/meteo/st/" st))
 
 
-(defn station-keyboard [st]
+(defn station-keyboard [st is-fav?]
   {:type    "inline_keyboard"
-   :payload {:buttons [[{:type "callback" :text "⭐" :payload (str "fav:add:" st)}
+   :payload {:buttons [[{:type "callback" :text (if is-fav? "⭐" "☆") :payload (str "fav:toggle:" st)}
+                        {:type "callback" :text "⏰" :payload (str "sub:new:" st)}
                         {:type "link"     :text "🌐" :url (station-url st)}]]}})
 
 
