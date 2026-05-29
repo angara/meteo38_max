@@ -63,14 +63,14 @@
 (defn- handle-message-created
   [config db update]
   (let [message (:message update)
-        chat-id (or (:chat_id update) (get-in message [:recipient :chat_id]))
+        chat-id (str (or (:chat_id update) (get-in message [:recipient :chat_id])))
         text    (get-in message [:body :text])
         user    (:sender message)]
     (cond
       (seq text)
       (or
        (handle-command config db chat-id user text)
-       (command/handle-text config chat-id text))
+       (command/handle-text config db chat-id text))
 
       (attachment-by-type message "location")
       (handle-location-message config db chat-id message)
@@ -89,7 +89,7 @@
 
 
 (defn- handle-bot-started [config db update]
-  (command/handle-start config db (:chat_id update) (:user update)))
+  (command/handle-start config db (str (:chat_id update)) (:user update)))
 
 
 (defn handle-update [config db update]

@@ -56,12 +56,15 @@
   (let [weather (when last (format-weather last))]
     (str/join "\n"
               (remove nil?
-                      [(str "🔹 " title)
+                      [(str "🔹 <u>" title "</u>")
                        descr
-                       (str
-                        (when elev (str " ^" (int elev) " м"))
-                        (when distance (str "  (" (int (/ distance 1000)) " км)")))
-                       (when (seq weather) weather)]))))
+                       (when (or elev distance)
+                         (str "<i>"
+                              (when elev (str "^" (int elev) " м"))
+                              (when distance (str "  (" (int (/ distance 1000)) " км)"))
+                              "</i>"))
+                       (when (seq weather)
+                         (str "<b>" weather "</b>"))]))))
 
 
 (defn format-station-info [{:keys [st title descr elev last]}]

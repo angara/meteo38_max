@@ -37,10 +37,12 @@
   (java.net.URLEncoder/encode (str s) "UTF-8"))
 
 
-(defn- active-stations-url [base-url lat lon {:keys [last-hours search]}]
-  (let [params (cond-> [["lat" lat] ["lon" lon]]
+(defn- active-stations-url [base-url {:keys [lat lon last-hours search]}]
+  (let [params (cond-> []
+                 lat        (conj ["lat" lat])
+                 lon        (conj ["lon" lon])
                  last-hours (conj ["last-hours" last-hours])
-                 search (conj ["search" search]))]
+                 search     (conj ["search" search]))]
     (str base-url "/active-stations?"
          (str/join "&" (map (fn [[k v]] (str k "=" (url-encode v))) params)))))
 
@@ -49,8 +51,8 @@
   (str base-url "/station-info?st=" (url-encode station-name)))
 
 
-(defn- fetch-active-stations* [base-url auth timeout lat lon opts]
-  (fetch-json (active-stations-url base-url lat lon opts) auth timeout))
+(defn- fetch-active-stations* [base-url auth timeout opts]
+  (fetch-json (active-stations-url base-url opts) auth timeout))
 
 
 (defn- fetch-station-info* [base-url auth timeout station-name]
@@ -66,18 +68,20 @@
 
 
 (defn get-active-stations
-  "Get active weather stations near location.
+  "Get active weather stations.
 
+   Options: :lat, :lon, :last-hours, :search
    Returns: {:stations [{:st, :title, :lat, :lon, :distance, :last, ...}]}"
-  [config lat lon & {:keys [last-hours search]}]
+  [config & {:keys [lat lon last-hours search]}]
   (fetch-active-stations
    (:meteo-api-url config)
    (:meteo-api-auth config)
    (:meteo-api-timeout config)
-   lat lon
    (cond-> {}
+     lat        (assoc :lat lat)
+     lon        (assoc :lon lon)
      last-hours (assoc :last-hours last-hours)
-     search (assoc :search search))))
+     search     (assoc :search search))))
 
 
 (defn get-station-info

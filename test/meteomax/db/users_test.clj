@@ -13,7 +13,18 @@
   (let [calls (atom [])]
     (with-redefs [pg/execute (fn [db sql opts]
                                (swap! calls conj [db sql opts])
-                               [{:favorites ["uiii"]}])]
+                               [{:favs ["uiii"]}])]
       (users/add-favorite! :db 42 "uiii")
       (is (= :db (ffirst @calls)))
-      (is (= [42 "uiii"] (get-in (first @calls) [2 :params]))))))
+      (is (= [42 ["uiii"]] (get-in (first @calls) [2 :params]))))))
+
+
+(deftest ensure-user-stores-userinfo
+  (let [calls (atom [])]
+    (with-redefs [pg/execute (fn [db sql opts]
+                               (swap! calls conj [db sql opts])
+                               [{:chat_id "1" :userinfo {:name "Иван"}}])]
+      (users/ensure-user! :db "1" {:name "Иван" :username "ivan"})
+      (is (= :db (ffirst @calls)))
+      (is (= ["1" {:name "Иван" :username "ivan"}]
+             (get-in (first @calls) [2 :params]))))))

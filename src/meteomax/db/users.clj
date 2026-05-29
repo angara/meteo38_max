@@ -1,56 +1,52 @@
 (ns meteomax.db.users
-  "Database queries for bot users. Assumes a users table with profile,
-   location and favorites columns."
+  "Database queries for bot users."
   (:require [pg.core :as pg]))
 
 
 (defn ensure-user!
-  [db chat-id username first-name]
+  [db chat-id userinfo]
   (first
    (pg/execute db
-               "insert into users (chat_id, username, first_name)
-                values ($1, $2, $3)
+               "insert into users (chat_id, userinfo)
+                values ($1, $2)
                 on conflict (chat_id) do update
-                set username = excluded.username,
-                    first_name = excluded.first_name
+                set userinfo   = excluded.userinfo,
+                    updated_at = now()
                 returning *"
-               {:params [chat-id username first-name]})))
+               {:params [chat-id userinfo]})))
 
 
 (defn get-user-location
   [db chat-id]
-  (let [row (first
-             (pg/execute db
-                         "select latitude, longitude
-                          from users
-                          where chat_id = $1"
-                         {:params [chat-id]}))]
-    (when (and (:latitude row) (:longitude row))
-      row)))
+  (when-let [latlon (:last_latlon
+                     (first (pg/execute db
+                                        "select last_latlon
+                                         from users
+                                         where chat_id = $1"
+                                        {:params [chat-id]})))]
+    {:latitude (nth latlon 0) :longitude (nth latlon 1)}))
 
 
 (defn set-user-location!
   [db chat-id latitude longitude]
   (first
    (pg/execute db
-               "insert into users (chat_id, latitude, longitude)
-                values ($1, $2, $3)
+               "insert into users (chat_id, last_latlon)
+                values ($1, $2)
                 on conflict (chat_id) do update
-                set latitude = excluded.latitude,
-                    longitude = excluded.longitude
-                returning latitude, longitude"
-               {:params [chat-id latitude longitude]})))
+                set last_latlon = excluded.last_latlon,
+                    updated_at  = now()
+                returning last_latlon"
+               {:params [chat-id [latitude longitude]]})))
 
 
 (defn get-favorites
   [db chat-id]
-  (or (:favorites
-       (first
-        (pg/execute db
-                    "select favorites
-                     from users
-                     where chat_id = $1"
-                    {:params [chat-id]})))
+  (or (:favs (first (pg/execute db
+                                "select favs
+                                 from users
+                                 where chat_id = $1"
+                                {:params [chat-id]})))
       []))
 
 
@@ -58,13 +54,14 @@
   [db chat-id station-name]
   (first
    (pg/execute db
-               "insert into users (chat_id, favorites)
-                values ($1, array[$2]::text[])
+               "insert into users (chat_id, favs)
+                values ($1, $2)
                 on conflict (chat_id) do update
-                set favorites = case
-                                  when $2 = any(coalesce(users.favorites, '{}'::text[]))
-                                    then coalesce(users.favorites, '{}'::text[])
-                                  else array_append(coalesce(users.favorites, '{}'::text[]), $2)
-                                end
-                returning favorites"
-               {:params [chat-id station-name]})))
+                set favs = case
+                             when coalesce(users.favs, '[]'::jsonb) @> excluded.favs
+                               then coalesce(users.favs, '[]'::jsonb)
+                             else coalesce(users.favs, '[]'::jsonb) || excluded.favs
+                           end,
+                    updated_at = now()
+                returning favs"
+               {:params [chat-id [station-name]]})))

@@ -70,10 +70,11 @@
                  :elev 495.0 :distance 2066.8
                  :last {:t -20.0 :t_delta 0.0 :p 986.0 :w 3.0 :g 14.0 :b 80.0}})
         lines (str/split-lines result)]
-    (is (str/includes? result "🔹 Иркутский аэропорт"))
+    (is (str/includes? result "🔹 <u>Иркутский аэропорт</u>"))
     (is (str/includes? result "г. Иркутск, ул. Ширямова, 101"))
     (is (str/includes? result "^495 м"))
     (is (str/includes? result "(2 км)"))
+    (is (str/includes? (last lines) "<b>"))
     (is (str/includes? (last lines) "-20°C"))
     (is (str/includes? (last lines) "мм.рт.ст."))
     (is (str/includes? (last lines) "м/с"))))
@@ -81,13 +82,15 @@
 (deftest format-station-brief-no-weather
   (let [result (fmt/format-station-brief {:st "abc" :title "Тест"
                                           :descr "Описание"})]
-    (is (str/includes? result "🔹 Тест"))
-    (is (str/includes? result "Описание"))))
+    (is (str/includes? result "🔹 <u>Тест</u>"))
+    (is (str/includes? result "Описание"))
+    (is (not (str/includes? result "<i></i>")))))
 
 (deftest format-station-brief-no-optional-fields
   (let [result (fmt/format-station-brief {:st "abc" :title "Тест"})]
-    (is (str/includes? result "🔹 Тест"))
-    (is (not (str/includes? result "null")))))
+    (is (str/includes? result "🔹 <u>Тест</u>"))
+    (is (not (str/includes? result "null")))
+    (is (not (str/includes? result "<i></i>")))))
 
 
 ;; --- format-station-info ---

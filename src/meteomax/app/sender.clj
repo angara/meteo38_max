@@ -2,7 +2,6 @@
   "Scheduled subscription sender using Chime."
   (:require [clojure.string :as str]
             [chime.core :as chime]
-            [clojure.core.async :as async]
             [tick.core :as t]
             [meteomax.app.fmt :as fmt]
             [meteomax.app.maxapi :as maxapi]
@@ -75,23 +74,23 @@
 (defn start-sender
   "Start subscription sender scheduled job."
   [config db]
-  (log! :info {:msg "Starting subscription sender"})
-  (let [ch (async/chan)]
-    (chime/chime-at
-     (chime/periodic-seq (t/now) (t/new-duration 60 :seconds))
-     (fn [_instant]
-       (try
-         (check-and-send config db)
-         (catch Exception e
-           (log! :error {:msg "Sender error" :error (ex-message e)})))))
-    {:channel ch
-     :running true}))
+  (log! {:level :info :id :sender/start :msg "Starting subscription sender"})
+  (let [chime (chime/chime-at
+               (chime/periodic-seq (t/now) (t/new-duration 60 :seconds))
+               (fn [_instant]
+                 (try
+                   (check-and-send config db)
+                   (catch Exception e
+                     (log! {:level :error
+                            :id    :sender/error
+                            :msg   "Sender error"
+                            :data  {:error (ex-message e)}})))))]
+    {:chime chime}))
 
 
 (defn stop-sender
   "Stop subscription sender."
   [sender]
-  (log! :info {:msg "Stopping subscription sender"})
-  (async/close! (:channel sender))
-  (alter-meta! sender assoc :running false))
+  (log! {:level :info :id :sender/stop :msg "Stopping subscription sender"})
+  (.close ^java.io.Closeable (:chime sender)))
 

@@ -14,15 +14,14 @@
 
 
 (defn handle-start [config db chat-id user]
-  (let [{:keys [username name]} user]
-    (users/ensure-user! db chat-id username name)
-    (send-text config chat-id
-               (str "Привет, " (or name "друг") "! 👋\n\n"
+  (users/ensure-user! db chat-id user)
+  (send-text config chat-id
+               (str "Привет, " (or (:name user) "друг") "! 👋\n\n"
                     "Я бот погоды для Прибайкалья. Здесь можно получать данные о погоде "
                     "со станций проекта https://meteo38.ru, настроить автоматическое "
                     "уведомление в нужное время.\n"
                     "\n"
-                    "Используй /help для просмотра списка команд.\n"))))
+                    "Используй /help для просмотра списка команд.\n")))
 
 
 (defn handle-help [config chat-id]
@@ -67,18 +66,23 @@
 
 (defn handle-location [config db chat-id {:keys [latitude longitude]}]
   (users/set-user-location! db chat-id latitude longitude)
-  (let [stations (take 5 (:stations (meteo-api/get-active-stations config latitude longitude :last-hours 24)))]
+  (let [stations (take 5 (:stations (meteo-api/get-active-stations config :lat latitude :lon longitude :last-hours 24)))]
     (if (empty? stations)
       (send-text config chat-id "В окрестностях не найдено активных станций.")
       (doseq [st stations]
         (maxapi/send-message (:max-api-token config) chat-id
                              (fmt/format-station-brief st)
+                             :format "html"
                              :attachments [(fmt/station-keyboard (:st st))])))))
 
 
-(defn- handle-search [config chat-id text]
-  ;; NOTE: use last user location
-  (let [stations (take 10 (:stations (meteo-api/get-active-stations config 52.28 104.28
+(defn- handle-search [config db chat-id text]
+  (let [{:keys [latitude longitude]} (users/get-user-location db chat-id)
+        lat (or latitude (:default-lat config))
+        lon (or longitude (:default-lon config))
+        stations (take 10 (:stations (meteo-api/get-active-stations config
+                                                                    :lat lat
+                                                                    :lon lon
                                                                     :last-hours 24
                                                                     :search text)))]
     (if (empty? stations)
@@ -86,11 +90,12 @@
       (doseq [st stations]
         (maxapi/send-message (:max-api-token config) chat-id
                              (fmt/format-station-brief st)
+                             :format "html"
                              :attachments [(fmt/station-keyboard (:st st))])))))
 
 
-(defn handle-text [config chat-id text]
+(defn handle-text [config db chat-id text]
   (if (>= (count text) 3)
-    (handle-search config chat-id text)
+    (handle-search config db chat-id text)
     (send-text config chat-id "Используйте /help для справки.")))
 
