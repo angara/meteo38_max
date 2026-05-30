@@ -51,8 +51,8 @@
              :data  {:sub-id (:id sub) :error (ex-message e)}}))))
 
 
-(defn check-and-send [config db]
-  (let [local-now (t/in (t/now) (:zone-id config))
+(defn check-and-send [config db instant]
+  (let [local-now (t/in instant (:zone-id config))
         subs      (subscriptions/get-all-active-subs db)
         due-subs  (filter #(and (days-match? local-now (:days_of_week %))
                                 (time-match? local-now (:time_str %)))
@@ -65,9 +65,9 @@
   (log! {:level :info :id :sender/start :msg "Starting subscription sender"})
   (let [chime (chime/chime-at
                (chime/periodic-seq (t/now) (t/new-duration 60 :seconds))
-               (fn [_instant]
+               (fn [instant]
                  (try
-                   (check-and-send config db)
+                   (check-and-send config db instant)
                    (catch Exception e
                      (log! {:level :error
                             :id    :sender/error
